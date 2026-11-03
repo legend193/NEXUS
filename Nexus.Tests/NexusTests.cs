@@ -915,6 +915,30 @@ public class RgbEngineFloodPreventionTests
     }
 }
 
+public class OpenRgbDeviceRegistrationTests
+{
+    [Fact]
+    public void OpenRgbDevice_InitializesZonesAndNameProperly()
+    {
+        using var client = new Nexus.Integrations.OpenRGB.OpenRgbClient();
+        var dev = new Nexus.Integrations.OpenRGB.OpenRgbDevice(client, 5, "EVision Keyboard 0C45:652F", "EVision", "Keyboard", 104);
+
+        Assert.Equal("EVision Keyboard 0C45:652F", dev.Name);
+        Assert.Equal(1, dev.Zones.Count);
+        Assert.Equal(104, dev.Zones[0].LedCount);
+    }
+
+    [Fact]
+    public void CorsairVengeance_AttachOpenRgbClient_WiresClientAndController()
+    {
+        using var controller = new Nexus.Integrations.Memory.CorsairVengeanceRgbController();
+        using var client = new Nexus.Integrations.OpenRGB.OpenRgbClient();
+
+        controller.AttachOpenRgbClient(client, 0, 10, "Corsair Vengeance RGB Pro DDR4");
+        Assert.Equal(4, controller.Zones.Count);
+    }
+}
+
 public class RgbStudio3DTests
 {
     [Fact]

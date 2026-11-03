@@ -18,7 +18,16 @@ public class RgbEngine : IRgbEngine, IDisposable
 
     public bool IsRunning => _renderLoopTask != null && !_renderLoopTask.IsCompleted;
     public bool IsSynchronized { get; set; } = true;
-    public RgbEffectConfig GlobalEffect { get; set; } = new();
+    private RgbEffectConfig _globalEffect = new();
+    public RgbEffectConfig GlobalEffect
+    {
+        get => _globalEffect;
+        set
+        {
+            _globalEffect = value;
+            _lastAppliedDeviceEffect.Clear();
+        }
+    }
     public IReadOnlyList<IRgbDevice> Devices => _devices.Values.ToList();
     public Func<float>? AudioPeakLevelProvider { get; set; }
 

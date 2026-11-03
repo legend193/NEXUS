@@ -86,7 +86,7 @@ public class GpuRgbController : IRgbDevice, IDisposable
 
     private int _openRgbControllerIndex = -1;
     private int _openRgbLedCount = 26;
-    private readonly OpenRgbClient _openRgbClient;
+    private OpenRgbClient _openRgbClient;
 
     public string Id { get; } = "msi-geforce-rtx-3080";
     public string Name { get; } = "MSI GeForce RTX 3080 Gaming X Trio";
@@ -112,6 +112,18 @@ public class GpuRgbController : IRgbDevice, IDisposable
         _zones.Add(new RgbZone("zone-lightbar", "Front & Side Light Bar ARGB", 24));
         _zones.Add(new RgbZone("zone-logo", "MSI Dragon Logo", 1));
         _zones.Add(new RgbZone("zone-backplate", "Backplate Accent", 1));
+    }
+
+    public void AttachOpenRgbClient(OpenRgbClient client, int controllerIndex, int ledCount, string name)
+    {
+        lock (_lock)
+        {
+            _openRgbClient = client;
+            _openRgbControllerIndex = controllerIndex;
+            _openRgbLedCount = ledCount;
+            _ = client.SetCustomModeAsync(controllerIndex);
+            _logger?.LogInformation("Attached active OpenRGB client to GPU Controller [{Index}] {Name} ({Leds} LEDs)", controllerIndex, name, ledCount);
+        }
     }
 
     public void RegisterGpuController(int controllerIndex, int ledCount, string name)

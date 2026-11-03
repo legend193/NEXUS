@@ -801,10 +801,10 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
 
             foreach (var dev in _rgbEngine.Devices)
             {
+                if (!IsDeviceMatchingTarget(dev, targetKey, _selectedCanvasDevice)) continue;
+
                 if (dev is LianLiUniFanController lianLi)
                 {
-                    if (!IsSyncAllDevices && !targetKey.Contains("lianli", StringComparison.OrdinalIgnoreCase)) continue;
-
                     if (SelectedEffect == RgbEffectType.Static)
                     {
                         await lianLi.SetAllColorsAsync(pColor);
@@ -817,42 +817,9 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
                         await lianLi.SetHardwareEffectAsync(0xFF, effectCode);
                     }
                 }
-                else if (dev is CorsairCommanderCoreController corsair)
-                {
-                    if (!IsSyncAllDevices && !targetKey.Contains("corsair", StringComparison.OrdinalIgnoreCase) && !targetKey.Contains("aio", StringComparison.OrdinalIgnoreCase) && !targetKey.Contains("pump", StringComparison.OrdinalIgnoreCase)) continue;
-                    await corsair.SetAllColorsAsync(pColor);
-                }
-                else if (dev is GigabyteMotherboardRgbController mb)
-                {
-                    if (!IsSyncAllDevices && !targetKey.Contains("mb", StringComparison.OrdinalIgnoreCase) && !targetKey.Contains("aorus", StringComparison.OrdinalIgnoreCase)) continue;
-                    await mb.SetAllColorsAsync(pColor);
-                }
-                else if (dev is CorsairVengeanceRgbController ram)
-                {
-                    if (!IsSyncAllDevices && !targetKey.Contains("ram", StringComparison.OrdinalIgnoreCase) && !targetKey.Contains("vengeance", StringComparison.OrdinalIgnoreCase)) continue;
-                    await ram.SetAllColorsAsync(pColor);
-                }
-                else if (dev is LogitechG502Controller logi)
-                {
-                    if (!IsSyncAllDevices && !targetKey.Contains("mouse", StringComparison.OrdinalIgnoreCase) && !targetKey.Contains("g502", StringComparison.OrdinalIgnoreCase)) continue;
-                    await logi.SetAllColorsAsync(pColor);
-                }
-                else if (dev is SonixKeyboardController kb)
-                {
-                    if (!IsSyncAllDevices && !targetKey.Contains("kb", StringComparison.OrdinalIgnoreCase) && !targetKey.Contains("keyboard", StringComparison.OrdinalIgnoreCase)) continue;
-                    await kb.SetAllColorsAsync(pColor);
-                }
-                else if (dev is GpuRgbController gpu)
-                {
-                    if (!IsSyncAllDevices && !targetKey.Contains("gpu", StringComparison.OrdinalIgnoreCase) && !targetKey.Contains("3080", StringComparison.OrdinalIgnoreCase)) continue;
-                    await gpu.SetAllColorsAsync(pColor);
-                }
                 else
                 {
-                    if (IsSyncAllDevices)
-                    {
-                        await dev.SetAllColorsAsync(pColor);
-                    }
+                    await dev.SetAllColorsAsync(pColor);
                 }
             }
 
@@ -866,6 +833,61 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
         {
             HardwareStatusMessage = $"Error: {ex.Message}";
         }
+    }
+
+    private static bool IsDeviceMatchingTarget(IRgbDevice dev, string targetKey, iCueDeviceCanvasItem? canvasItem)
+    {
+        if (string.IsNullOrEmpty(targetKey) || targetKey.Equals("all", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        string devId = dev.Id.ToLowerInvariant();
+        string devName = dev.Name.ToLowerInvariant();
+        string target = targetKey.ToLowerInvariant();
+        string deviceType = canvasItem?.DeviceType?.ToLowerInvariant() ?? "";
+
+        // Mouse matching
+        if (target.Contains("mouse") || target.Contains("g502") || deviceType.Contains("mouse"))
+        {
+            return dev is LogitechG502Controller || devId.Contains("mouse") || devId.Contains("g502") || devName.Contains("mouse") || devName.Contains("g502");
+        }
+
+        // Keyboard matching
+        if (target.Contains("kb") || target.Contains("keyboard") || deviceType.Contains("keyboard"))
+        {
+            return dev is SonixKeyboardController || devId.Contains("kb") || devId.Contains("keyboard") || devName.Contains("keyboard") || devName.Contains("keychron") || devName.Contains("evision") || devName.Contains("sonix");
+        }
+
+        // RAM matching
+        if (target.Contains("ram") || target.Contains("vengeance") || target.Contains("memory") || deviceType.Contains("ram"))
+        {
+            return dev is CorsairVengeanceRgbController || devId.Contains("ram") || devId.Contains("dram") || devId.Contains("vengeance") || devName.Contains("ram") || devName.Contains("dram") || devName.Contains("vengeance");
+        }
+
+        // GPU matching
+        if (target.Contains("gpu") || target.Contains("3080") || deviceType.Contains("gpu"))
+        {
+            return dev is GpuRgbController || devId.Contains("gpu") || devId.Contains("3080") || devName.Contains("3080") || devName.Contains("geforce");
+        }
+
+        // Lian Li matching
+        if (target.Contains("lianli") || (target.Contains("fan") && canvasItem?.HubName?.Contains("Lian Li") == true))
+        {
+            return dev is LianLiUniFanController || devId.Contains("lianli");
+        }
+
+        // Corsair Commander CORE matching
+        if (target.Contains("corsair") || target.Contains("pump") || target.Contains("aio") || (canvasItem?.HubName?.Contains("Commander") == true))
+        {
+            return dev is CorsairCommanderCoreController || dev is CorsairEliteLcdController || devId.Contains("corsair") || devId.Contains("commander");
+        }
+
+        // Motherboard matching
+        if (target.Contains("mb") || target.Contains("aorus") || target.Contains("motherboard"))
+        {
+            return dev is GigabyteMotherboardRgbController || devId.Contains("mb") || devId.Contains("aorus");
+        }
+
+        return devId.Contains(target) || devName.Contains(target);
     }
 
     private void OnAnimationTick(object? sender, EventArgs e)

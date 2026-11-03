@@ -25,7 +25,7 @@ public class CorsairVengeanceRgbController : IRgbDevice, IDisposable, IAsyncDisp
     private double _brightness = 1.0;
     private bool _isDisposed;
 
-    private readonly OpenRgbClient _openRgbClient;
+    private OpenRgbClient _openRgbClient;
     private readonly List<(int ControllerIndex, int LedCount)> _dramControllers = new();
     private bool _isConnectedToOpenRgb;
     private DateTime _lastConnectionAttempt = DateTime.MinValue;
@@ -83,6 +83,28 @@ public class CorsairVengeanceRgbController : IRgbDevice, IDisposable, IAsyncDisp
     }
 
     public Task ShutdownAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+    public void AttachOpenRgbClient(OpenRgbClient client, int controllerIndex, int ledCount, string name)
+    {
+        lock (_ioLock)
+        {
+            _openRgbClient = client;
+            _isConnectedToOpenRgb = client.IsConnected;
+            if (!_dramControllers.Exists(c => c.ControllerIndex == controllerIndex))
+            {
+                _dramControllers.Add((controllerIndex, ledCount));
+                _ = client.SetCustomModeAsync(controllerIndex);
+                _logger?.LogInformation("Attached active OpenRGB client to RAM Controller [{Index}] {Name} ({Leds} LEDs)", controllerIndex, name, ledCount);
+
+                if (_lastAppliedColor != default && _lastAppliedColor != new RgbColor(0, 0, 0, 0))
+                {
+                    var stickColors = new RgbColor[ledCount];
+                    Array.Fill(stickColors, _lastAppliedColor);
+                    _ = client.UpdateLedsAsync(controllerIndex, stickColors);
+                }
+            }
+        }
+    }
 
     public void RegisterDramController(int controllerIndex, int ledCount, string name)
     {

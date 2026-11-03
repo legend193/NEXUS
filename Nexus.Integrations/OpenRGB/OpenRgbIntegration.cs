@@ -4,6 +4,8 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using Nexus.Abstractions.Devices;
 using Nexus.Abstractions.Rgb;
+using Nexus.Integrations.Corsair;
+using Nexus.Integrations.LianLi;
 
 namespace Nexus.Integrations.OpenRGB;
 
@@ -123,6 +125,88 @@ public class OpenRgbClient : IDisposable
         }
 
         return false;
+    }
+
+    public async Task<bool> ConnectWithAutoStartAsync(CancellationToken cancellationToken = default)
+    {
+        bool ok = await ConnectAsync(cancellationToken);
+        if (ok) return true;
+
+        EnsureOpenRgbServerRunning(_logger);
+        for (int i = 0; i < 6; i++)
+        {
+            await Task.Delay(800, cancellationToken);
+            ok = await ConnectAsync(cancellationToken);
+            if (ok) return true;
+        }
+
+        return false;
+    }
+
+    public static void EnsureOpenRgbServerRunning(ILogger? logger = null)
+    {
+        try
+        {
+            // 1. Ensure PawnIO kernel driver service is running
+            try
+            {
+                using var procPawn = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "net.exe",
+                    Arguments = "start PawnIO",
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+                procPawn?.WaitForExit(1000);
+            }
+            catch { }
+
+            // 2. Check if port 6742 is already reachable
+            try
+            {
+                using var probe = new TcpClient();
+                var probeTask = probe.ConnectAsync("127.0.0.1", 6742);
+                if (probeTask.Wait(300) && probe.Connected)
+                {
+                    return;
+                }
+            }
+            catch { }
+
+            // 3. Port 6742 is NOT accepting connections. Kill any existing non-server/hung OpenRGB processes
+            var existing = System.Diagnostics.Process.GetProcessesByName("OpenRGB");
+            foreach (var p in existing)
+            {
+                try { p.Kill(); p.WaitForExit(1000); } catch { }
+            }
+
+            // 4. Find OpenRGB.exe path
+            string[] searchPaths = new[]
+            {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NEXUS", "tools", "OpenRGB", "OpenRGB Windows 64-bit", "OpenRGB.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "OpenRGB", "OpenRGB.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "OpenRGB", "OpenRGB.exe")
+            };
+
+            string? exePath = searchPaths.FirstOrDefault(File.Exists);
+            if (exePath != null)
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = $"/c start /B \"\" \"{exePath}\" --server --startminimized",
+                    WorkingDirectory = Path.GetDirectoryName(exePath),
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                System.Diagnostics.Process.Start(psi);
+                logger?.LogInformation("Launched OpenRGB background server from {Path}", exePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger?.LogWarning(ex, "Failed to launch OpenRGB background server.");
+        }
     }
 
     private void Disconnect()
@@ -428,10 +512,16 @@ public class OpenRgbDeviceProvider : IDeviceProvider
         var devices = new List<IDevice>();
         try
         {
-            bool connected = await _client.ConnectAsync(cancellationToken);
-            if (!connected) return devices;
+            bool connected = await _client.ConnectWithAutoStartAsync(cancellationToken);
+            if (!connected)
+            {
+                _logger?.LogWarning("OpenRGB SDK Bridge could not connect to 127.0.0.1:6742.");
+                return devices;
+            }
 
             int count = await _client.GetControllerCountAsync(cancellationToken);
+            _logger?.LogInformation("OpenRGB SDK Server connected. Found {Count} hardware controllers.", count);
+
             for (int i = 0; i < count; i++)
             {
                 var info = await _client.GetControllerDataAsync(i, cancellationToken);
@@ -439,48 +529,83 @@ public class OpenRgbDeviceProvider : IDeviceProvider
                 string devVendor = info?.Vendor ?? "OpenRGB Universal";
                 string devDesc = info?.Description ?? "Synced via OpenRGB SDK Port 6742";
                 int ledCount = (info?.LedCount > 0) ? info.LedCount : 10;
+                int devType = info?.Type ?? 0;
 
-                // Link Corsair Vengeance RAM directly to our native high-level driver
-                if (devName.Contains("Vengeance", StringComparison.OrdinalIgnoreCase) ||
-                    devName.Contains("DRAM", StringComparison.OrdinalIgnoreCase))
+                // 1. RAM / DRAM Modules (Corsair Vengeance RT / Pro / DDR4)
+                if (devType == 1 || devName.Contains("Vengeance", StringComparison.OrdinalIgnoreCase) ||
+                    devName.Contains("DRAM", StringComparison.OrdinalIgnoreCase) ||
+                    devName.Contains("Corsair Memory", StringComparison.OrdinalIgnoreCase))
                 {
                     var ramCtrl = _rgbEngine.Devices.OfType<Nexus.Integrations.Memory.CorsairVengeanceRgbController>().FirstOrDefault();
                     if (ramCtrl != null)
                     {
-                        ramCtrl.RegisterDramController(i, ledCount, devName);
+                        ramCtrl.AttachOpenRgbClient(_client, i, ledCount, devName);
                     }
-                    _logger?.LogInformation("OpenRGB Device [{Index}] {Name} registered with native NEXUS RAM Controller", i, devName);
+
+                    await _client.SetCustomModeAsync(i, cancellationToken);
+                    var ramDev = new OpenRgbDevice(_client, i, $"RAM: {devName}", devVendor, devDesc, ledCount);
+                    _rgbEngine.RegisterDevice(ramDev);
+                    devices.Add(ramDev);
+                    _logger?.LogInformation("OpenRGB Bridge: Registered RAM Controller [{Index}] '{Name}' ({Leds} LEDs)", i, devName, ledCount);
                     continue;
                 }
 
-                // Link MSI RTX 3080 GPU directly to our native high-level driver
-                if (devName.Contains("3080", StringComparison.OrdinalIgnoreCase) ||
+                // 2. Gaming Mouse (Logitech G502 HERO / Razer / Corsair / SteelSeries)
+                if (devType == 6 || devName.Contains("Mouse", StringComparison.OrdinalIgnoreCase) ||
+                    devName.Contains("G502", StringComparison.OrdinalIgnoreCase) ||
+                    devName.Contains("HERO", StringComparison.OrdinalIgnoreCase))
+                {
+                    await _client.SetCustomModeAsync(i, cancellationToken);
+                    var mouseDev = new OpenRgbDevice(_client, i, $"Mouse: {devName}", devVendor, devDesc, ledCount);
+                    _rgbEngine.RegisterDevice(mouseDev);
+                    devices.Add(mouseDev);
+                    _logger?.LogInformation("OpenRGB Bridge: Registered Mouse Controller [{Index}] '{Name}' ({Leds} LEDs)", i, devName, ledCount);
+                    continue;
+                }
+
+                // 3. Gaming Keyboard (Mechanical / EVision / Sonix / Corsair / Razer / Ducky)
+                if (devType == 5 || devName.Contains("Keyboard", StringComparison.OrdinalIgnoreCase) ||
+                    devName.Contains("Keychron", StringComparison.OrdinalIgnoreCase) ||
+                    devName.Contains("EVision", StringComparison.OrdinalIgnoreCase))
+                {
+                    await _client.SetCustomModeAsync(i, cancellationToken);
+                    var kbDev = new OpenRgbDevice(_client, i, $"Keyboard: {devName}", devVendor, devDesc, ledCount);
+                    _rgbEngine.RegisterDevice(kbDev);
+                    devices.Add(kbDev);
+                    _logger?.LogInformation("OpenRGB Bridge: Registered Keyboard Controller [{Index}] '{Name}' ({Leds} LEDs)", i, devName, ledCount);
+                    continue;
+                }
+
+                // 4. GPU (MSI GeForce RTX 3080 Gaming X Trio / Suprim / Ventus)
+                if (devType == 2 || devName.Contains("3080", StringComparison.OrdinalIgnoreCase) ||
                     devName.Contains("GeForce", StringComparison.OrdinalIgnoreCase) ||
                     devName.Contains("Gaming X Trio", StringComparison.OrdinalIgnoreCase))
                 {
                     var gpuCtrl = _rgbEngine.Devices.OfType<Nexus.Integrations.Gpu.GpuRgbController>().FirstOrDefault();
                     if (gpuCtrl != null)
                     {
-                        gpuCtrl.RegisterGpuController(i, ledCount, devName);
+                        gpuCtrl.AttachOpenRgbClient(_client, i, ledCount, devName);
                     }
-                    _logger?.LogInformation("OpenRGB Device [{Index}] {Name} registered with native NEXUS GPU Controller", i, devName);
+
+                    await _client.SetCustomModeAsync(i, cancellationToken);
+                    var gpuDev = new OpenRgbDevice(_client, i, $"GPU: {devName}", devVendor, devDesc, ledCount);
+                    _rgbEngine.RegisterDevice(gpuDev);
+                    devices.Add(gpuDev);
+                    _logger?.LogInformation("OpenRGB Bridge: Registered GPU Controller [{Index}] '{Name}'", i, devName);
                     continue;
                 }
 
-                // Skip devices that are already managed natively to prevent redundant packet collisions
-                bool isAlreadyNativelyManaged = 
-                    devName.Contains("Lian Li", StringComparison.OrdinalIgnoreCase) ||
-                    devName.Contains("Commander", StringComparison.OrdinalIgnoreCase) ||
-                    devName.Contains("G502", StringComparison.OrdinalIgnoreCase) ||
-                    devName.Contains("Keyboard", StringComparison.OrdinalIgnoreCase) ||
-                    devName.Contains("AORUS", StringComparison.OrdinalIgnoreCase);
+                // 5. Skip devices that are already managed natively to prevent redundant packet collisions
+                bool isNativeLianLi = devName.Contains("Lian Li", StringComparison.OrdinalIgnoreCase) && _rgbEngine.Devices.Any(d => d is LianLiUniFanController);
+                bool isNativeCommander = devName.Contains("Commander", StringComparison.OrdinalIgnoreCase) && _rgbEngine.Devices.Any(d => d is CorsairCommanderCoreController);
 
-                if (isAlreadyNativelyManaged)
+                if (isNativeLianLi || isNativeCommander)
                 {
-                    _logger?.LogDebug("OpenRGB Device [{Index}] {Name} skipped (natively managed by NEXUS driver)", i, devName);
+                    _logger?.LogDebug("OpenRGB Device [{Index}] '{Name}' skipped (driven by native NEXUS USB HID driver)", i, devName);
                     continue;
                 }
 
+                await _client.SetCustomModeAsync(i, cancellationToken);
                 var dev = new OpenRgbDevice(_client, i, devName, devVendor, devDesc, ledCount);
                 _rgbEngine.RegisterDevice(dev);
                 devices.Add(dev);
