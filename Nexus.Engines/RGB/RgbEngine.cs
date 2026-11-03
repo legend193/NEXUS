@@ -9,6 +9,7 @@ public class RgbEngine : IRgbEngine, IDisposable
 {
     private readonly ConcurrentDictionary<string, IRgbDevice> _devices = new();
     private readonly ConcurrentDictionary<string, RgbEffectConfig> _deviceEffects = new();
+    private readonly ConcurrentDictionary<string, (RgbColor Primary, double Brightness, RgbEffectType Effect)> _lastAppliedDeviceEffect = new();
     private readonly ILogger<RgbEngine>? _logger;
     private CancellationTokenSource? _renderCts;
     private Task? _renderLoopTask;
@@ -54,6 +55,8 @@ public class RgbEngine : IRgbEngine, IDisposable
             EffectType = RgbEffectType.Static,
             PrimaryColor = color
         };
+
+        _lastAppliedDeviceEffect.Clear();
 
         foreach (var device in _devices.Values)
         {
@@ -126,11 +129,33 @@ public class RgbEngine : IRgbEngine, IDisposable
 
     private async Task RenderDeviceEffectAsync(IRgbDevice device, RgbEffectConfig effect, double timeSeconds, CancellationToken token)
     {
+        double brightness = Math.Clamp(effect.Brightness * device.Brightness, 0.0, 1.0);
+
+        // For Static effect, dispatch to hardware only once when color or brightness changes!
+        // Avoid sending 30 redundant frames per second over USB/SMBus which floods controllers.
+        if (effect.EffectType == RgbEffectType.Static)
+        {
+            if (_lastAppliedDeviceEffect.TryGetValue(device.Id, out var prev) &&
+                prev.Effect == RgbEffectType.Static &&
+                prev.Primary == effect.PrimaryColor &&
+                Math.Abs(prev.Brightness - brightness) < 0.001)
+            {
+                return;
+            }
+
+            _lastAppliedDeviceEffect[device.Id] = (effect.PrimaryColor, brightness, RgbEffectType.Static);
+            var staticColor = ApplyBrightness(effect.PrimaryColor, brightness);
+            await device.SetAllColorsAsync(staticColor, token);
+            return;
+        }
+
+        // For dynamic animated effects, clear any static lock so returning to Static will apply immediately
+        _lastAppliedDeviceEffect.TryRemove(device.Id, out _);
+
         foreach (var zone in device.Zones)
         {
             var colors = new RgbColor[zone.LedCount];
             double speed = Math.Max(0.01, effect.Speed);
-            double brightness = Math.Clamp(effect.Brightness * device.Brightness, 0.0, 1.0);
 
             switch (effect.EffectType)
             {

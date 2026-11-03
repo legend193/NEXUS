@@ -26,6 +26,7 @@ public class CorsairEliteLcdController : IRgbDevice, IDisposable
     private SafeFileHandle? _handle;
     private readonly List<RgbZone> _zones = new();
     private readonly object _ioLock = new();
+    private int _isStreamingFrame;
 
     private AioLcdConfig _config = new();
     private double _brightness = 1.0;
@@ -206,67 +207,80 @@ public class CorsairEliteLcdController : IRgbDevice, IDisposable
     {
         if (jpegData == null || jpegData.Length == 0) return false;
 
-        if (_handle == null || _handle.IsInvalid)
+        // Skip if previous frame is still being transmitted to avoid USB congestion
+        if (Interlocked.CompareExchange(ref _isStreamingFrame, 1, 0) != 0)
         {
-            TryOpenDevice(null);
-            if (_handle == null || _handle.IsInvalid) return false;
+            return false;
         }
 
-        lock (_ioLock)
+        try
         {
-            try
+            if (_handle == null || _handle.IsInvalid)
             {
-                const int maxChunkPayload = 1016; // 1024 - 8 header bytes
-                int totalBytes = jpegData.Length;
-                int totalChunks = (int)Math.Ceiling((double)totalBytes / maxChunkPayload);
+                TryOpenDevice(null);
+                if (_handle == null || _handle.IsInvalid) return false;
+            }
 
-                for (int part = 0; part < totalChunks; part++)
+            lock (_ioLock)
+            {
+                try
                 {
-                    int offset = part * maxChunkPayload;
-                    int chunkLen = Math.Min(maxChunkPayload, totalBytes - offset);
-                    bool isEnd = (part == totalChunks - 1);
+                    const int maxChunkPayload = 1016; // 1024 - 8 header bytes
+                    int totalBytes = jpegData.Length;
+                    int totalChunks = (int)Math.Ceiling((double)totalBytes / maxChunkPayload);
 
-                    // 1024-byte Corsair Display packet
-                    byte[] packet = new byte[1024];
-                    packet[0] = 0x02; // Display Frame Data Opcode
-                    packet[1] = 0x05;
-                    packet[2] = 0x40;
-                    packet[3] = (byte)(isEnd ? 1 : 0);
-                    packet[4] = (byte)(part & 0xFF);
-                    packet[5] = (byte)((part >> 8) & 0xFF);
-                    packet[6] = (byte)(chunkLen & 0xFF);
-                    packet[7] = (byte)((chunkLen >> 8) & 0xFF);
-
-                    Array.Copy(jpegData, offset, packet, 8, chunkLen);
-
-                    // Write 1025-byte HID report with Report ID 0x00
-                    byte[] hidReport = new byte[1025];
-                    hidReport[0] = 0x00;
-                    Array.Copy(packet, 0, hidReport, 1, 1024);
-
-                    bool success = WriteFile(_handle, hidReport, 1025, out _, IntPtr.Zero);
-                    if (!success)
+                    for (int part = 0; part < totalChunks; part++)
                     {
-                        // Fallback: write 1024-byte packet directly
-                        success = WriteFile(_handle, packet, 1024, out _, IntPtr.Zero);
+                        int offset = part * maxChunkPayload;
+                        int chunkLen = Math.Min(maxChunkPayload, totalBytes - offset);
+                        bool isEnd = (part == totalChunks - 1);
+
+                        // 1024-byte Corsair Display packet
+                        byte[] packet = new byte[1024];
+                        packet[0] = 0x02; // Display Frame Data Opcode
+                        packet[1] = 0x05;
+                        packet[2] = 0x40;
+                        packet[3] = (byte)(isEnd ? 1 : 0);
+                        packet[4] = (byte)(part & 0xFF);
+                        packet[5] = (byte)((part >> 8) & 0xFF);
+                        packet[6] = (byte)(chunkLen & 0xFF);
+                        packet[7] = (byte)((chunkLen >> 8) & 0xFF);
+
+                        Array.Copy(jpegData, offset, packet, 8, chunkLen);
+
+                        // Write 1025-byte HID report with Report ID 0x00
+                        byte[] hidReport = new byte[1025];
+                        hidReport[0] = 0x00;
+                        Array.Copy(packet, 0, hidReport, 1, 1024);
+
+                        bool success = WriteFile(_handle, hidReport, 1025, out _, IntPtr.Zero);
+                        if (!success)
+                        {
+                            // Fallback: write 1024-byte packet directly
+                            success = WriteFile(_handle, packet, 1024, out _, IntPtr.Zero);
+                        }
+
+                        if (!success)
+                        {
+                            int err = Marshal.GetLastWin32Error();
+                            _logger?.LogWarning("Corsair LCD Cap WriteFile failed on chunk {Part}/{Total}. Win32 error: {Err}", part, totalChunks, err);
+                            return false;
+                        }
                     }
 
-                    if (!success)
-                    {
-                        int err = Marshal.GetLastWin32Error();
-                        _logger?.LogWarning("Corsair LCD Cap WriteFile failed on chunk {Part}/{Total}. Win32 error: {Err}", part, totalChunks, err);
-                        return false;
-                    }
+                    _logger?.LogDebug("Sent full {Bytes} byte JPEG frame to Corsair ELITE LCD ({Chunks} chunks).", totalBytes, totalChunks);
+                    return true;
                 }
-
-                _logger?.LogDebug("Sent full {Bytes} byte JPEG frame to Corsair ELITE LCD ({Chunks} chunks).", totalBytes, totalChunks);
-                return true;
+                catch (Exception ex)
+                {
+                    _logger?.LogError(ex, "Exception streaming JPEG frame to Corsair ELITE LCD.");
+                    return false;
+                }
             }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Exception streaming JPEG frame to Corsair ELITE LCD.");
-                return false;
-            }
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _isStreamingFrame, 0);
         }
     }
 

@@ -249,7 +249,7 @@ public class CorsairVengeanceRgbController : IRgbDevice, IDisposable, IAsyncDisp
 
         lock (_ioLock)
         {
-            if (_isConnectedToOpenRgb && _dramControllers.Count > 0 && effectiveColor == _lastAppliedColor && (DateTime.UtcNow - _lastAllColorUpdate).TotalMilliseconds < 1500)
+            if (_isConnectedToOpenRgb && _dramControllers.Count > 0 && effectiveColor == _lastAppliedColor)
             {
                 return;
             }
@@ -294,7 +294,7 @@ public class CorsairVengeanceRgbController : IRgbDevice, IDisposable, IAsyncDisp
         {
             if (zoneIndex < _lastZoneTimes.Length)
             {
-                if (effectiveColor == zone.CurrentColors[0] && (DateTime.UtcNow - _lastZoneTimes[zoneIndex]).TotalMilliseconds < 1500)
+                if (effectiveColor == zone.CurrentColors[0])
                 {
                     return;
                 }

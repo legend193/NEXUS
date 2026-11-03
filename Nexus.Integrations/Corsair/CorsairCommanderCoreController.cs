@@ -84,9 +84,9 @@ public class CorsairCommanderCoreController : IRgbDevice, IDisposable
         _logger = logger;
 
         // Commander Core layout:
-        // Zone 0: AIO Pump Cap (16 LEDs)
+        // Zone 0: AIO Pump Cap (24 LEDs Halo Ring)
         // Zone 1..6: 6 Fan Ports (allocated 34 LEDs each in QL mode)
-        _zones.Add(new RgbZone("zone-pump", "AIO Pump Cap (Halo Ring)", 16));
+        _zones.Add(new RgbZone("zone-pump", "AIO Pump Cap (Halo Ring)", 24));
         _zones.Add(new RgbZone("zone-fan-1", "Fan Port 1", 34));
         _zones.Add(new RgbZone("zone-fan-2", "Fan Port 2", 34));
         _zones.Add(new RgbZone("zone-fan-3", "Fan Port 3", 34));
@@ -161,8 +161,8 @@ public class CorsairCommanderCoreController : IRgbDevice, IDisposable
         {
             try
             {
-                await Task.Delay(1200, token);
-                if (_controllerReady && (DateTime.UtcNow - _lastCommitTime).TotalMilliseconds > 1500)
+                await Task.Delay(800, token);
+                if (_controllerReady && (DateTime.UtcNow - _lastCommitTime).TotalMilliseconds >= 1000)
                 {
                     lock (_ioLock)
                     {
@@ -279,9 +279,51 @@ public class CorsairCommanderCoreController : IRgbDevice, IDisposable
 
         try
         {
-            var span = colors.Span;
-            var primary = span.Length > 0 ? span[0] : new RgbColor(255, 255, 255);
-            return SetAllColorsAsync(primary, cancellationToken);
+            lock (_ioLock)
+            {
+                int zoneIndex = _zones.FindIndex(z => z.ZoneId.Equals(zoneId, StringComparison.OrdinalIgnoreCase));
+                if (zoneIndex < 0 || colors.IsEmpty) return Task.CompletedTask;
+
+                var zone = _zones[zoneIndex];
+                var span = colors.Span;
+
+                // Determine byte offset for this zone in _lastRgbData
+                // Zone 0: Pump Cap (24 LEDs = 72 bytes) -> offset 0
+                // Zone 1..6: Fans 1..6 (34 LEDs = 102 bytes each) -> offset 72 + (zoneIndex - 1) * 102
+                int startOffset = zoneIndex == 0 ? 0 : 72 + (zoneIndex - 1) * 102;
+                int ledCount = zoneIndex == 0 ? 24 : 34;
+
+                for (int i = 0; i < Math.Min(ledCount, span.Length); i++)
+                {
+                    var col = span[i];
+                    byte r = (byte)Math.Round(col.R * Brightness);
+                    byte g = (byte)Math.Round(col.G * Brightness);
+                    byte b = (byte)Math.Round(col.B * Brightness);
+
+                    int bytePos = startOffset + i * 3;
+                    if (bytePos + 2 < _lastRgbData.Length)
+                    {
+                        _lastRgbData[bytePos] = r;
+                        _lastRgbData[bytePos + 1] = g;
+                        _lastRgbData[bytePos + 2] = b;
+                    }
+
+                    if (i < zone.CurrentColors.Length)
+                    {
+                        zone.CurrentColors[i] = new RgbColor(r, g, b);
+                    }
+                }
+
+                // Flush to USB when the last fan zone is reached, or when at least 30ms have elapsed
+                bool isLastZone = (zoneIndex == _zones.Count - 1);
+                double elapsedSinceCommit = (DateTime.UtcNow - _lastCommitTime).TotalMilliseconds;
+
+                if (isLastZone || elapsedSinceCommit >= 30)
+                {
+                    WriteEndpointData(new byte[] { 0x22, 0x00 }, new byte[] { 0x12, 0x00 }, _lastRgbData);
+                    _lastCommitTime = DateTime.UtcNow;
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -329,6 +371,12 @@ public class CorsairCommanderCoreController : IRgbDevice, IDisposable
                             rgbData[offset++] = b;
                         }
                     }
+                }
+
+                // Update internal zone state
+                foreach (var zone in _zones)
+                {
+                    Array.Fill(zone.CurrentColors, new RgbColor(r, g, b));
                 }
 
                 Array.Copy(rgbData, _lastRgbData, rgbData.Length);

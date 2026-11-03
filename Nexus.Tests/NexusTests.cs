@@ -3,6 +3,7 @@ using Microsoft.Win32.SafeHandles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Nexus.Abstractions.Cooling;
+using Nexus.Abstractions.Devices;
 using Nexus.Abstractions.Profiles;
 using Nexus.Abstractions.Rgb;
 using Nexus.Abstractions.Sensors;
@@ -834,6 +835,82 @@ public class CorsairVengeanceRgbControllerTests
                     await client.UpdateLedsAsync(i, colors);
                 }
             }
+        }
+    }
+}
+
+public class RgbEngineFloodPreventionTests
+{
+    private class TestRgbDevice : IRgbDevice
+    {
+        public string Id => "test-rgb-device";
+        public string Name => "Test RGB Device";
+        public string Manufacturer => "Test";
+        public string Model => "Test-01";
+        public string SerialNumber => "TEST-123";
+        public DeviceType Type => DeviceType.LightingController;
+        public DeviceConnectionStatus Status => DeviceConnectionStatus.Connected;
+        public DeviceCapabilities Capabilities => DeviceCapabilities.RgbLighting;
+        public string? FirmwareVersion => "v1.0";
+        public string IntegrationProvider => "Test Provider";
+        public IReadOnlyList<IDeviceControl> Controls => Array.Empty<IDeviceControl>();
+        public IReadOnlyDictionary<string, string> Properties => new Dictionary<string, string>();
+        public IReadOnlyList<RgbZone> Zones { get; } = new List<RgbZone> { new RgbZone("zone-1", "Zone 1", 10) };
+        public double Brightness { get; set; } = 1.0;
+
+        public int SetAllColorsCount { get; private set; }
+        public int SetZoneColorsCount { get; private set; }
+
+        public Task InitializeAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task ShutdownAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+        public Task SetAllColorsAsync(RgbColor color, CancellationToken cancellationToken = default)
+        {
+            SetAllColorsCount++;
+            return Task.CompletedTask;
+        }
+
+        public Task SetZoneColorsAsync(string zoneId, ReadOnlyMemory<RgbColor> colors, CancellationToken cancellationToken = default)
+        {
+            SetZoneColorsCount++;
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task RgbEngine_StaticEffect_DispatchesOnlyOnce_ToPreventBusFlooding()
+    {
+        var engine = new Nexus.Engines.RGB.RgbEngine();
+        var device = new TestRgbDevice();
+        engine.RegisterDevice(device);
+
+        engine.GlobalEffect = new RgbEffectConfig
+        {
+            EffectType = RgbEffectType.Static,
+            PrimaryColor = new RgbColor(0, 210, 255),
+            Brightness = 1.0
+        };
+
+        engine.Start();
+        await Task.Delay(150);
+        engine.Stop();
+
+        Assert.Equal(1, device.SetAllColorsCount);
+        Assert.Equal(0, device.SetZoneColorsCount);
+    }
+
+    [Fact]
+    public void CorsairCommanderCore_ZoneMapping_Has24PumpLedsAnd6FanZones()
+    {
+        using var controller = new Nexus.Integrations.Corsair.CorsairCommanderCoreController("dummy-path");
+        Assert.Equal(7, controller.Zones.Count);
+        Assert.Equal("zone-pump", controller.Zones[0].ZoneId);
+        Assert.Equal(24, controller.Zones[0].LedCount);
+
+        for (int i = 1; i <= 6; i++)
+        {
+            Assert.Equal($"zone-fan-{i}", controller.Zones[i].ZoneId);
+            Assert.Equal(34, controller.Zones[i].LedCount);
         }
     }
 }

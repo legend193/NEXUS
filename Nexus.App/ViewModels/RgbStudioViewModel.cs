@@ -983,7 +983,7 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
                 else if (dev is CorsairCommanderCoreController core)
                 {
                     var haloColor = RgbColor.FromHex(LcdHaloRingColorHex);
-                    var haloColors = new RgbColor[16];
+                    var haloColors = new RgbColor[24];
                     Array.Fill(haloColors, haloColor);
                     _ = core.SetZoneColorsAsync("zone-pump", haloColors);
                 }
