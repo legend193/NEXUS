@@ -24,6 +24,14 @@ public class AudioPersistentState
     public float MicVolume { get; set; } = 85f;
     public bool MicMuted { get; set; } = false;
 
+    // Assigned Audio Device IDs (Independent Source per Channel)
+    public string? MasterDeviceId { get; set; }
+    public string? GameDeviceId { get; set; }
+    public string? ChatDeviceId { get; set; }
+    public string? MediaDeviceId { get; set; }
+    public string? AuxDeviceId { get; set; }
+    public string? MicDeviceId { get; set; }
+
     // Studio & EQ Features
     public string SelectedPresetName { get; set; } = "CS2 / Warzone Footsteps";
     public float[] EqualizerBandGains { get; set; } = new float[10];

@@ -1250,5 +1250,115 @@ public class RgbStudio3DTests
             }
         }
     }
+
+    [Fact]
+    public void AudioStudio_ChannelDevices_CanSelectIndependentEndpoints()
+    {
+        var mockAudioEngine = new Nexus.Engines.Audio.AudioEngine();
+        using var vm = new Nexus.App.ViewModels.AudioStudioViewModel(mockAudioEngine);
+
+        var gameChoice = new Nexus.App.ViewModels.AudioDeviceChoice
+        {
+            Id = "device-sonar-game",
+            Name = "SteelSeries Sonar - Gaming",
+            DisplayName = "SteelSeries Sonar - Gaming [Virtual]",
+            IsVirtual = true
+        };
+
+        var chatChoice = new Nexus.App.ViewModels.AudioDeviceChoice
+        {
+            Id = "device-sonar-chat",
+            Name = "SteelSeries Sonar - Chat",
+            DisplayName = "SteelSeries Sonar - Chat [Virtual]",
+            IsVirtual = true
+        };
+
+        vm.Channels[1].AvailableDevices.Add(gameChoice);
+        vm.Channels[1].SelectedDevice = gameChoice;
+
+        vm.Channels[2].AvailableDevices.Add(chatChoice);
+        vm.Channels[2].SelectedDevice = chatChoice;
+
+        Assert.Equal("device-sonar-game", vm.Channels[1].SelectedDevice.Id);
+        Assert.True(vm.Channels[1].IsVirtualSource);
+        Assert.Contains("Virtual", vm.Channels[1].EndpointStatusText);
+
+        Assert.Equal("device-sonar-chat", vm.Channels[2].SelectedDevice.Id);
+        Assert.True(vm.Channels[2].IsVirtualSource);
+    }
+
+    [Fact]
+    public void AudioStudio_SoloRouting_MutesNonSoloChannels()
+    {
+        var mockAudioEngine = new Nexus.Engines.Audio.AudioEngine();
+        using var vm = new Nexus.App.ViewModels.AudioStudioViewModel(mockAudioEngine);
+
+        var sessionApp = new Nexus.App.ViewModels.AudioSessionItem(null, "Discord", "#00B4D8", "Chat");
+        vm.Channels[2].AssignedApps.Add(sessionApp);
+
+        var gameApp = new Nexus.App.ViewModels.AudioSessionItem(null, "CS2", "#10B981", "Game");
+        vm.Channels[1].AssignedApps.Add(gameApp);
+
+        // Turn Solo ON for Game channel
+        vm.Channels[1].IsSolo = true;
+
+        // Chat app should be muted
+        Assert.True(sessionApp.IsMuted);
+        // Game app should NOT be muted
+        Assert.False(gameApp.IsMuted);
+
+        // Turn Solo OFF
+        vm.Channels[1].IsSolo = false;
+        Assert.False(sessionApp.IsMuted);
+    }
+
+    [Fact]
+    public void AudioStudio_DevicePersistence_SavesAndRestoresSelectedDeviceIds()
+    {
+        string tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"nexus_audio_dev_{Guid.NewGuid():N}.json");
+        try
+        {
+            var mockAudioEngine = new Nexus.Engines.Audio.AudioEngine();
+            using var vm1 = new Nexus.App.ViewModels.AudioStudioViewModel(mockAudioEngine);
+            vm1.EnablePersistence = true;
+            vm1.StateFilePath = tempFile;
+
+            var gameDev = new Nexus.App.ViewModels.AudioDeviceChoice { Id = "test-game-id", Name = "Test Game Device" };
+            vm1.Channels[1].AvailableDevices.Add(gameDev);
+            vm1.Channels[1].SelectedDevice = gameDev;
+
+            var chatDev = new Nexus.App.ViewModels.AudioDeviceChoice { Id = "test-chat-id", Name = "Test Chat Device" };
+            vm1.Channels[2].AvailableDevices.Add(chatDev);
+            vm1.Channels[2].SelectedDevice = chatDev;
+
+            vm1.SaveState();
+
+            Assert.True(System.IO.File.Exists(tempFile));
+
+            using var vm2 = new Nexus.App.ViewModels.AudioStudioViewModel(mockAudioEngine);
+            vm2.EnablePersistence = true;
+            vm2.StateFilePath = tempFile;
+
+            var method = typeof(Nexus.App.ViewModels.AudioStudioViewModel).GetMethod("LoadSavedState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            method?.Invoke(vm2, null);
+
+            // Re-populate devices and verify auto-binding to saved ID
+            vm2.Channels[1].AvailableDevices.Add(gameDev);
+            vm2.Channels[2].AvailableDevices.Add(chatDev);
+            
+            var bindMethod = typeof(Nexus.App.ViewModels.AudioStudioViewModel).GetMethod("AutoBindChannelDevices", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            bindMethod?.Invoke(vm2, null);
+
+            Assert.Equal("test-game-id", vm2.Channels[1].SelectedDevice?.Id);
+            Assert.Equal("test-chat-id", vm2.Channels[2].SelectedDevice?.Id);
+        }
+        finally
+        {
+            if (System.IO.File.Exists(tempFile))
+            {
+                System.IO.File.Delete(tempFile);
+            }
+        }
+    }
 }
 

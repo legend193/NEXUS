@@ -223,26 +223,37 @@ public class AudioEngine : IAudioEngine, IDisposable
         lock (_lock)
         {
             _activeSessions.Clear();
+            var seenPids = new HashSet<int>();
+
             try
             {
-                var defaultDevice = _enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-                if (defaultDevice != null)
+                var renderCollection = _enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
+                foreach (var device in renderCollection)
                 {
-                    var sessionManager = defaultDevice.AudioSessionManager;
-                    var sessions = sessionManager.Sessions;
-                    for (int i = 0; i < sessions.Count; i++)
+                    try
                     {
-                        var s = sessions[i];
-                        if (s.State != AudioSessionState.AudioSessionStateExpired)
+                        var sessionManager = device.AudioSessionManager;
+                        if (sessionManager == null) continue;
+                        var sessions = sessionManager.Sessions;
+                        for (int i = 0; i < sessions.Count; i++)
                         {
-                            _activeSessions.Add(new AudioSessionWrapper(s));
+                            var s = sessions[i];
+                            if (s.State != AudioSessionState.AudioSessionStateExpired)
+                            {
+                                int pid = (int)s.GetProcessID;
+                                if (pid == 0 || seenPids.Add(pid))
+                                {
+                                    _activeSessions.Add(new AudioSessionWrapper(s));
+                                }
+                            }
                         }
                     }
+                    catch { }
                 }
             }
             catch (Exception ex)
             {
-                _logger?.LogDebug(ex, "Could not enumerate active audio sessions.");
+                _logger?.LogDebug(ex, "Could not enumerate active audio sessions across render endpoints.");
             }
         }
 

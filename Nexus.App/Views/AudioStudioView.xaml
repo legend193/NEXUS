@@ -21,8 +21,9 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}" />
             <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
-            <Setter Property="Padding" Value="16,6" />
-            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="FontSize" Value="11" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -104,29 +105,29 @@
                     </StackPanel>
 
                     <!-- Studio Tabs -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <RadioButton Style="{StaticResource SonarNavTabStyle}" Content="الميكسر العام (Mixer)"
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,10,0">
+                        <RadioButton Style="{StaticResource SonarNavTabStyle}" Content="الميكسر (Mixer)"
                                      IsChecked="{Binding SelectedTopTab, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter=Mixer}"
                                      Command="{Binding SelectTabCommand}" CommandParameter="Mixer" />
-                        <RadioButton Style="{StaticResource SonarNavTabStyle}" Content="معادل الألعاب (Game EQ)"
+                        <RadioButton Style="{StaticResource SonarNavTabStyle}" Content="الألعاب (Game EQ)"
                                      IsChecked="{Binding SelectedTopTab, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter=Game EQ}"
                                      Command="{Binding SelectTabCommand}" CommandParameter="Game EQ" />
-                        <RadioButton Style="{StaticResource SonarNavTabStyle}" Content="معادل المحادثة (Chat EQ)"
+                        <RadioButton Style="{StaticResource SonarNavTabStyle}" Content="المحادثة (Chat EQ)"
                                      IsChecked="{Binding SelectedTopTab, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter=Chat EQ}"
                                      Command="{Binding SelectTabCommand}" CommandParameter="Chat EQ" />
-                        <RadioButton Style="{StaticResource SonarNavTabStyle}" Content="استوديو المايكروفون (Mic Studio)"
+                        <RadioButton Style="{StaticResource SonarNavTabStyle}" Content="المايك (Mic Studio)"
                                      IsChecked="{Binding SelectedTopTab, Converter={StaticResource EqualityToBooleanConverter}, ConverterParameter=Mic Studio}"
                                      Command="{Binding SelectTabCommand}" CommandParameter="Mic Studio" />
                     </StackPanel>
 
                     <!-- Quick Global Action Buttons -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Style="{StaticResource NexusPillButton}" Command="{Binding MuteAllChannelsCommand}" Margin="0,0,8,0" Content="كتم الكل (Mute All)" />
-                        <Button Style="{StaticResource NexusPillButton}" Command="{Binding ResetAllVolumesCommand}" Margin="0,0,8,0" Content="إعادة ضبط (Reset)" />
-                        <Button Style="{StaticResource NexusAccentButton}" Command="{Binding RefreshSessionsCommand}" Height="32" Padding="14,4">
+                        <Button Style="{StaticResource NexusPillButton}" Command="{Binding MuteAllChannelsCommand}" Margin="0,0,6,0" Padding="8,4" Content="كتم الكل" FontSize="11" />
+                        <Button Style="{StaticResource NexusPillButton}" Command="{Binding ResetAllVolumesCommand}" Margin="0,0,6,0" Padding="8,4" Content="إعادة ضبط" FontSize="11" />
+                        <Button Style="{StaticResource NexusAccentButton}" Command="{Binding RefreshSessionsCommand}" Height="28" Padding="10,3">
                             <StackPanel Orientation="Horizontal">
-                                <Path Data="{StaticResource IconRefresh}" Stroke="#FFFFFF" StrokeThickness="1.5" Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                <TextBlock Text="تحديث المسارات" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11" />
+                                <Path Data="{StaticResource IconRefresh}" Stroke="#FFFFFF" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                <TextBlock Text="تحديث" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -138,24 +139,30 @@
             <!-- ========================================================================= -->
             <StackPanel Visibility="{Binding SelectedTopTab, Converter={StaticResource EqualityToVisibilityConverter}, ConverterParameter=Mixer}">
 
-                <!-- ChatMix Centerpiece Widget -->
-                <Border Style="{StaticResource GlassCard}" Margin="0,0,0,16" Padding="20,14">
+                <!-- ChatMix Centerpiece Widget (SteelSeries Sonar Dual Deck) -->
+                <Border Style="{StaticResource GlassCard}" Margin="0,0,0,16" Padding="20,16">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <Grid Grid.Row="0" Margin="0,0,0,10">
+                        <Grid Grid.Row="0" Margin="0,0,0,14">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Path Data="{StaticResource IconGameController}" Stroke="#10B981" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" />
+                                <Border Background="#10B981" Width="8" Height="8" CornerRadius="4" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <Path Data="{StaticResource IconGameController}" Stroke="#10B981" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center" />
                                 <TextBlock Text="CHATMIX موازنة الألعاب والمحادثة" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                                <Border Background="#132B20" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="HARDWARE CROSSFADE" FontSize="9" FontWeight="SemiBold" Foreground="#34D399" />
+                                </Border>
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="25" Content="تركيز اللعبة (75/25)" Margin="0,0,6,0" Height="24" Padding="8,0" />
-                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding ResetChatMixCommand}" Content="متوازن (50/50)" Margin="0,0,6,0" Height="24" Padding="8,0" />
-                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="75" Content="تركيز المحادثة (25/75)" Height="24" Padding="8,0" />
+                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="0" Content="100% اللعبة" Margin="0,0,6,0" Height="26" Padding="10,0" />
+                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="25" Content="تركيز اللعبة (75/25)" Margin="0,0,6,0" Height="26" Padding="10,0" />
+                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding ResetChatMixCommand}" Content="متوازن (50/50)" Margin="0,0,6,0" Height="26" Padding="10,0" />
+                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="75" Content="تركيز المحادثة (25/75)" Margin="0,0,6,0" Height="26" Padding="10,0" />
+                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="100" Content="100% المحادثة" Height="26" Padding="10,0" />
                             </StackPanel>
                         </Grid>
 
@@ -166,17 +173,36 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
-                                <Border Background="#10B981" Width="8" Height="8" CornerRadius="4" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                <TextBlock Text="GAME" FontWeight="Bold" Foreground="#10B981" FontSize="12" />
-                            </StackPanel>
+                            <Border Grid.Column="0" Background="#11241C" CornerRadius="8" Padding="12,6" Margin="0,0,16,0" VerticalAlignment="Center" BorderBrush="#1C382B" BorderThickness="1">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconGameController}" Stroke="#10B981" StrokeThickness="1.5" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="GAME AUDIO" FontWeight="Bold" Foreground="#10B981" FontSize="11" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Channels[1].Volume, StringFormat={}  {0:0}%}" FontWeight="SemiBold" Foreground="#34D399" FontSize="11" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
 
-                            <Slider Grid.Column="1" Style="{StaticResource SonarChatMixSlider}" Value="{Binding ChatMixValue, Mode=TwoWay}" Minimum="0" Maximum="100" VerticalAlignment="Center" />
+                            <Grid Grid.Column="1" VerticalAlignment="Center">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                
+                                <Slider Grid.Row="0" Style="{StaticResource SonarChatMixSlider}" Value="{Binding ChatMixValue, Mode=TwoWay}" Minimum="0" Maximum="100" VerticalAlignment="Center" />
+                                
+                                <Grid Grid.Row="1" Margin="2,4,2,0">
+                                    <TextBlock Text="100% Game" FontSize="9" Foreground="#64748B" HorizontalAlignment="Left" />
+                                    <TextBlock Text="50/50 Balanced" FontSize="9" FontWeight="SemiBold" Foreground="#94A3B8" HorizontalAlignment="Center" />
+                                    <TextBlock Text="100% Chat" FontSize="9" Foreground="#64748B" HorizontalAlignment="Right" />
+                                </Grid>
+                            </Grid>
 
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
-                                <TextBlock Text="CHAT" FontWeight="Bold" Foreground="#00B4D8" FontSize="12" Margin="0,0,6,0" />
-                                <Border Background="#00B4D8" Width="8" Height="8" CornerRadius="4" VerticalAlignment="Center" />
-                            </StackPanel>
+                            <Border Grid.Column="2" Background="#102530" CornerRadius="8" Padding="12,6" Margin="16,0,0,0" VerticalAlignment="Center" BorderBrush="#163442" BorderThickness="1">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Channels[2].Volume, StringFormat={}{0:0}%  }" FontWeight="SemiBold" Foreground="#22D3EE" FontSize="11" VerticalAlignment="Center" />
+                                    <TextBlock Text="VOICE CHAT" FontWeight="Bold" Foreground="#00B4D8" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <Path Data="{StaticResource IconChatBubble}" Stroke="#00B4D8" StrokeThickness="1.5" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
                         </Grid>
                     </Grid>
                 </Border>
@@ -187,13 +213,16 @@
                         <Grid Margin="0,0,0,14">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <Path Data="{StaticResource IconAudio}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" />
-                                <TextBlock Text="قنوات الصوت الاحترافية (Hardware Mixer Channels)" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" />
+                                <TextBlock Text="قنوات الصوت الاحترافية (Independent Audio Sources &amp; Faders)" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" />
                             </StackPanel>
-                            <TextBlock Text="SteelSeries Sonar Precision Faders" Style="{StaticResource TextSubtle}" HorizontalAlignment="Right" FontSize="11" VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Border Background="#10B981" Width="6" Height="6" CornerRadius="3" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="SteelSeries Sonar Matrix Engine Active" Style="{StaticResource TextSubtle}" FontSize="11" VerticalAlignment="Center" />
+                            </StackPanel>
                         </Grid>
 
                         <!-- 6-Columns Channel Strips Grid -->
-                        <Grid Height="340">
+                        <Grid MinHeight="440">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
@@ -203,10 +232,11 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
 
-                            <!-- Channel 0: MASTER (Blue #4A72FF) -->
-                            <Border Grid.Column="0" Background="#111520" CornerRadius="12" Padding="10,12" Margin="0,0,4,0" BorderBrush="#252F48" BorderThickness="1">
+                            <!-- Channel 0: MASTER (Cobalt Blue #3B82F6) -->
+                            <Border Grid.Column="0" Background="#0F131D" CornerRadius="12" Padding="10,12" Margin="0,0,4,0" BorderBrush="#253556" BorderThickness="1">
                                 <Grid DataContext="{Binding Channels[0]}">
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
@@ -216,199 +246,401 @@
                                     </Grid.RowDefinitions>
 
                                     <!-- Channel Header -->
-                                    <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,6">
-                                        <Path Data="{StaticResource IconSpeaker}" Stroke="#4A72FF" StrokeThickness="1.5" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                                        <TextBlock Text="MASTER" FontWeight="Bold" FontSize="12" Foreground="#4A72FF" HorizontalAlignment="Center" />
-                                    </StackPanel>
+                                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Path Data="{StaticResource IconSpeaker}" Stroke="#3B82F6" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="MASTER" FontWeight="Bold" FontSize="12" Foreground="#3B82F6" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
 
-                                    <!-- Device Pill -->
-                                    <Border Grid.Row="1" Background="#0C0E14" CornerRadius="6" Padding="6,3" Margin="0,0,0,8">
-                                        <TextBlock Text="{Binding AssignedDeviceName}" FontSize="10" Style="{StaticResource TextSubtle}" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <!-- Independent Audio Device Dropdown -->
+                                    <Border Grid.Row="1" Margin="0,0,0,6">
+                                        <ComboBox Style="{StaticResource SonarDeviceComboBox}"
+                                                  ItemsSource="{Binding AvailableDevices}"
+                                                  SelectedItem="{Binding SelectedDevice}"
+                                                  ToolTip="اختر مخرج الصوت المخصص لقناة الماستر" />
                                     </Border>
 
-                                    <!-- Vertical Fader & Stereo VU Meter -->
-                                    <Grid Grid.Row="2" HorizontalAlignment="Center">
+                                    <!-- Tag Badge -->
+                                    <Border Grid.Row="2" Background="#162238" CornerRadius="4" Padding="6,2" Margin="0,0,0,8" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding EndpointStatusText}" FontSize="9" FontWeight="SemiBold" Foreground="#60A5FA" />
+                                    </Border>
+
+                                    <!-- Vertical Fader, dB Scale & Stereo VU Meter -->
+                                    <Grid Grid.Row="3" HorizontalAlignment="Center" Margin="0,4,0,4">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="22" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <Slider Grid.Column="0" Style="{StaticResource SonarVerticalFader}" Height="160" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
-                                        <ctrl:StereoVuMeter Grid.Column="1" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="160" VerticalAlignment="Center" />
+
+                                        <!-- dB Scale Reference Labels -->
+                                        <UniformGrid Grid.Column="0" Rows="7" Height="170" Margin="0,0,4,0">
+                                            <TextBlock Text="+3" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="0" FontSize="8" Foreground="#94A3B8" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-6" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-12" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-24" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-40" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        </UniformGrid>
+
+                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Height="170" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
+                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="170" VerticalAlignment="Center" />
                                     </Grid>
 
-                                    <!-- Volume Text -->
-                                    <TextBlock Grid.Row="3" Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,6,0,6" />
+                                    <!-- Volume Text & Decibels Display -->
+                                    <StackPanel Grid.Row="4" HorizontalAlignment="Center" Margin="0,4,0,6">
+                                        <TextBlock Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding DecibelsDisplay}" FontSize="9" Foreground="#94A3B8" HorizontalAlignment="Center" />
+                                    </StackPanel>
 
-                                    <!-- Mute Button -->
-                                    <ToggleButton Grid.Row="4" Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                                    <!-- Dual Hardware Buttons: Mute (M) & Solo (S) -->
+                                    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                                        <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,6,0" ToolTip="كتم القناة (Mute)" />
+                                        <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
+                                    </StackPanel>
 
-                                    <!-- Bottom Label -->
-                                    <Border Grid.Row="5" Background="#161B26" CornerRadius="4" Padding="6,2" HorizontalAlignment="Center">
-                                        <TextBlock Text="MAIN OUT" FontSize="9" FontWeight="SemiBold" Foreground="#4A72FF" />
+                                    <!-- Bottom Label / Apps Tray -->
+                                    <Border Grid.Row="6" Background="#162033" CornerRadius="6" Padding="6,4">
+                                        <TextBlock Text="MAIN MIX OUT" FontSize="9" FontWeight="SemiBold" Foreground="#3B82F6" HorizontalAlignment="Center" />
                                     </Border>
                                 </Grid>
                             </Border>
 
                             <!-- Channel 1: GAME (Emerald #10B981) -->
-                            <Border Grid.Column="1" Background="#111520" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#1C382B" BorderThickness="1">
+                            <Border Grid.Column="1" Background="#0F1517" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#1C382B" BorderThickness="1">
                                 <Grid DataContext="{Binding Channels[1]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,6">
-                                        <Path Data="{StaticResource IconGameController}" Stroke="#10B981" StrokeThickness="1.5" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                                        <TextBlock Text="GAME" FontWeight="Bold" FontSize="12" Foreground="#10B981" HorizontalAlignment="Center" />
-                                    </StackPanel>
+                                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Path Data="{StaticResource IconGameController}" Stroke="#10B981" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="GAME" FontWeight="Bold" FontSize="12" Foreground="#10B981" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
 
-                                    <Border Grid.Row="1" Background="#0C0E14" CornerRadius="6" Padding="6,3" Margin="0,0,0,8">
-                                        <TextBlock Text="{Binding PresetName}" FontSize="10" Foreground="#10B981" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <Border Grid.Row="1" Margin="0,0,0,6">
+                                        <ComboBox Style="{StaticResource SonarDeviceComboBox}"
+                                                  ItemsSource="{Binding AvailableDevices}"
+                                                  SelectedItem="{Binding SelectedDevice}"
+                                                  ToolTip="اختر مخرج الصوت المخصص لقناة الألعاب" />
                                     </Border>
 
-                                    <Grid Grid.Row="2" HorizontalAlignment="Center">
+                                    <Border Grid.Row="2" Background="#132B20" CornerRadius="4" Padding="6,2" Margin="0,0,0,8" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding EndpointStatusText}" FontSize="9" FontWeight="SemiBold" Foreground="#34D399" />
+                                    </Border>
+
+                                    <Grid Grid.Row="3" HorizontalAlignment="Center" Margin="0,4,0,4">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="22" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <Slider Grid.Column="0" Style="{StaticResource SonarVerticalFader}" Height="160" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
-                                        <ctrl:StereoVuMeter Grid.Column="1" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="160" VerticalAlignment="Center" />
+
+                                        <UniformGrid Grid.Column="0" Rows="7" Height="170" Margin="0,0,4,0">
+                                            <TextBlock Text="+3" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="0" FontSize="8" Foreground="#94A3B8" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-6" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-12" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-24" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-40" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        </UniformGrid>
+
+                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Height="170" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
+                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="170" VerticalAlignment="Center" />
                                     </Grid>
 
-                                    <TextBlock Grid.Row="3" Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,6,0,6" />
-                                    <ToggleButton Grid.Row="4" Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                                    <StackPanel Grid.Row="4" HorizontalAlignment="Center" Margin="0,4,0,6">
+                                        <TextBlock Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding DecibelsDisplay}" FontSize="9" Foreground="#94A3B8" HorizontalAlignment="Center" />
+                                    </StackPanel>
 
-                                    <Border Grid.Row="5" Background="#13261D" CornerRadius="4" Padding="6,2" HorizontalAlignment="Center">
-                                        <TextBlock Text="DIRECT AUDIO" FontSize="9" FontWeight="SemiBold" Foreground="#10B981" />
+                                    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                                        <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,6,0" ToolTip="كتم القناة (Mute)" />
+                                        <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
+                                    </StackPanel>
+
+                                    <!-- Apps Mini Tray -->
+                                    <Border Grid.Row="6" Background="#11241C" CornerRadius="6" Padding="6,4" MinHeight="26">
+                                        <ItemsControl ItemsSource="{Binding AssignedApps}" HorizontalAlignment="Center">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Width="18" Height="18" CornerRadius="4" Margin="2,0" Background="#193327" ToolTip="{Binding DisplayName}">
+                                                        <Image Source="{Binding Icon}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </Border>
                                 </Grid>
                             </Border>
 
-                            <!-- Channel 2: CHAT (Cyan #00B4D8) -->
-                            <Border Grid.Column="2" Background="#111520" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#163442" BorderThickness="1">
+                            <!-- Channel 2: CHAT (Electric Cyan #00B4D8) -->
+                            <Border Grid.Column="2" Background="#0C141A" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#163442" BorderThickness="1">
                                 <Grid DataContext="{Binding Channels[2]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,6">
-                                        <Path Data="{StaticResource IconChatBubble}" Stroke="#00B4D8" StrokeThickness="1.5" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                                        <TextBlock Text="CHAT" FontWeight="Bold" FontSize="12" Foreground="#00B4D8" HorizontalAlignment="Center" />
-                                    </StackPanel>
+                                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Path Data="{StaticResource IconChatBubble}" Stroke="#00B4D8" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="CHAT" FontWeight="Bold" FontSize="12" Foreground="#00B4D8" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
 
-                                    <Border Grid.Row="1" Background="#0C0E14" CornerRadius="6" Padding="6,3" Margin="0,0,0,8">
-                                        <TextBlock Text="DISCORD / COMMS" FontSize="10" Foreground="#00B4D8" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <Border Grid.Row="1" Margin="0,0,0,6">
+                                        <ComboBox Style="{StaticResource SonarDeviceComboBox}"
+                                                  ItemsSource="{Binding AvailableDevices}"
+                                                  SelectedItem="{Binding SelectedDevice}"
+                                                  ToolTip="اختر مخرج الصوت المخصص لقناة المحادثة (Discord / Teams)" />
                                     </Border>
 
-                                    <Grid Grid.Row="2" HorizontalAlignment="Center">
+                                    <Border Grid.Row="2" Background="#102530" CornerRadius="4" Padding="6,2" Margin="0,0,0,8" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding EndpointStatusText}" FontSize="9" FontWeight="SemiBold" Foreground="#22D3EE" />
+                                    </Border>
+
+                                    <Grid Grid.Row="3" HorizontalAlignment="Center" Margin="0,4,0,4">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="22" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <Slider Grid.Column="0" Style="{StaticResource SonarVerticalFader}" Height="160" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
-                                        <ctrl:StereoVuMeter Grid.Column="1" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="160" VerticalAlignment="Center" />
+
+                                        <UniformGrid Grid.Column="0" Rows="7" Height="170" Margin="0,0,4,0">
+                                            <TextBlock Text="+3" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="0" FontSize="8" Foreground="#94A3B8" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-6" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-12" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-24" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-40" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        </UniformGrid>
+
+                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Height="170" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
+                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="170" VerticalAlignment="Center" />
                                     </Grid>
 
-                                    <TextBlock Grid.Row="3" Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,6,0,6" />
-                                    <ToggleButton Grid.Row="4" Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                                    <StackPanel Grid.Row="4" HorizontalAlignment="Center" Margin="0,4,0,6">
+                                        <TextBlock Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding DecibelsDisplay}" FontSize="9" Foreground="#94A3B8" HorizontalAlignment="Center" />
+                                    </StackPanel>
 
-                                    <Border Grid.Row="5" Background="#102530" CornerRadius="4" Padding="6,2" HorizontalAlignment="Center">
-                                        <TextBlock Text="VOICE STREAM" FontSize="9" FontWeight="SemiBold" Foreground="#00B4D8" />
+                                    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                                        <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,6,0" ToolTip="كتم القناة (Mute)" />
+                                        <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
+                                    </StackPanel>
+
+                                    <!-- Apps Mini Tray -->
+                                    <Border Grid.Row="6" Background="#102530" CornerRadius="6" Padding="6,4" MinHeight="26">
+                                        <ItemsControl ItemsSource="{Binding AssignedApps}" HorizontalAlignment="Center">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Width="18" Height="18" CornerRadius="4" Margin="2,0" Background="#163545" ToolTip="{Binding DisplayName}">
+                                                        <Image Source="{Binding Icon}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </Border>
                                 </Grid>
                             </Border>
 
-                            <!-- Channel 3: MEDIA (Pink #EC4899) -->
-                            <Border Grid.Column="3" Background="#111520" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#3B1C2E" BorderThickness="1">
+                            <!-- Channel 3: MEDIA (Neon Pink #EC4899) -->
+                            <Border Grid.Column="3" Background="#140F18" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#3B1C2E" BorderThickness="1">
                                 <Grid DataContext="{Binding Channels[3]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,6">
-                                        <Path Data="{StaticResource IconMediaPlay}" Fill="#EC4899" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                                        <TextBlock Text="MEDIA" FontWeight="Bold" FontSize="12" Foreground="#EC4899" HorizontalAlignment="Center" />
-                                    </StackPanel>
+                                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Path Data="{StaticResource IconMediaPlay}" Fill="#EC4899" Width="16" Height="16" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="MEDIA" FontWeight="Bold" FontSize="12" Foreground="#EC4899" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
 
-                                    <Border Grid.Row="1" Background="#0C0E14" CornerRadius="6" Padding="6,3" Margin="0,0,0,8">
-                                        <TextBlock Text="SPOTIFY / MUSIC" FontSize="10" Foreground="#EC4899" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <Border Grid.Row="1" Margin="0,0,0,6">
+                                        <ComboBox Style="{StaticResource SonarDeviceComboBox}"
+                                                  ItemsSource="{Binding AvailableDevices}"
+                                                  SelectedItem="{Binding SelectedDevice}"
+                                                  ToolTip="اختر مخرج الصوت المخصص لقناة الوسائط (Spotify / YouTube)" />
                                     </Border>
 
-                                    <Grid Grid.Row="2" HorizontalAlignment="Center">
+                                    <Border Grid.Row="2" Background="#2B1422" CornerRadius="4" Padding="6,2" Margin="0,0,0,8" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding EndpointStatusText}" FontSize="9" FontWeight="SemiBold" Foreground="#F472B6" />
+                                    </Border>
+
+                                    <Grid Grid.Row="3" HorizontalAlignment="Center" Margin="0,4,0,4">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="22" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <Slider Grid.Column="0" Style="{StaticResource SonarVerticalFader}" Height="160" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
-                                        <ctrl:StereoVuMeter Grid.Column="1" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="160" VerticalAlignment="Center" />
+
+                                        <UniformGrid Grid.Column="0" Rows="7" Height="170" Margin="0,0,4,0">
+                                            <TextBlock Text="+3" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="0" FontSize="8" Foreground="#94A3B8" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-6" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-12" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-24" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-40" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        </UniformGrid>
+
+                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Height="170" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
+                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="170" VerticalAlignment="Center" />
                                     </Grid>
 
-                                    <TextBlock Grid.Row="3" Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,6,0,6" />
-                                    <ToggleButton Grid.Row="4" Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                                    <StackPanel Grid.Row="4" HorizontalAlignment="Center" Margin="0,4,0,6">
+                                        <TextBlock Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding DecibelsDisplay}" FontSize="9" Foreground="#94A3B8" HorizontalAlignment="Center" />
+                                    </StackPanel>
 
-                                    <Border Grid.Row="5" Background="#291420" CornerRadius="4" Padding="6,2" HorizontalAlignment="Center">
-                                        <TextBlock Text="MUSIC / BROWSER" FontSize="9" FontWeight="SemiBold" Foreground="#EC4899" />
+                                    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                                        <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,6,0" ToolTip="كتم القناة (Mute)" />
+                                        <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
+                                    </StackPanel>
+
+                                    <!-- Apps Mini Tray -->
+                                    <Border Grid.Row="6" Background="#26121E" CornerRadius="6" Padding="6,4" MinHeight="26">
+                                        <ItemsControl ItemsSource="{Binding AssignedApps}" HorizontalAlignment="Center">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Width="18" Height="18" CornerRadius="4" Margin="2,0" Background="#3D172E" ToolTip="{Binding DisplayName}">
+                                                        <Image Source="{Binding Icon}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </Border>
                                 </Grid>
                             </Border>
 
-                            <!-- Channel 4: AUX (Purple #A855F7) -->
-                            <Border Grid.Column="4" Background="#111520" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#341E47" BorderThickness="1">
+                            <!-- Channel 4: AUX (Studio Purple #A855F7) -->
+                            <Border Grid.Column="4" Background="#120F1A" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#341E47" BorderThickness="1">
                                 <Grid DataContext="{Binding Channels[4]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,6">
-                                        <Path Data="{StaticResource IconAuxWaves}" Stroke="#A855F7" StrokeThickness="1.5" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                                        <TextBlock Text="AUX" FontWeight="Bold" FontSize="12" Foreground="#A855F7" HorizontalAlignment="Center" />
-                                    </StackPanel>
+                                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Path Data="{StaticResource IconAuxWaves}" Stroke="#A855F7" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="AUX" FontWeight="Bold" FontSize="12" Foreground="#A855F7" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
 
-                                    <Border Grid.Row="1" Background="#0C0E14" CornerRadius="6" Padding="6,3" Margin="0,0,0,8">
-                                        <TextBlock Text="SYSTEM / APPS" FontSize="10" Foreground="#A855F7" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <Border Grid.Row="1" Margin="0,0,0,6">
+                                        <ComboBox Style="{StaticResource SonarDeviceComboBox}"
+                                                  ItemsSource="{Binding AvailableDevices}"
+                                                  SelectedItem="{Binding SelectedDevice}"
+                                                  ToolTip="اختر مخرج الصوت المخصص للقناة الإضافية (AUX)" />
                                     </Border>
 
-                                    <Grid Grid.Row="2" HorizontalAlignment="Center">
+                                    <Border Grid.Row="2" Background="#261536" CornerRadius="4" Padding="6,2" Margin="0,0,0,8" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding EndpointStatusText}" FontSize="9" FontWeight="SemiBold" Foreground="#C084FC" />
+                                    </Border>
+
+                                    <Grid Grid.Row="3" HorizontalAlignment="Center" Margin="0,4,0,4">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="22" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <Slider Grid.Column="0" Style="{StaticResource SonarVerticalFader}" Height="160" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
-                                        <ctrl:StereoVuMeter Grid.Column="1" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="160" VerticalAlignment="Center" />
+
+                                        <UniformGrid Grid.Column="0" Rows="7" Height="170" Margin="0,0,4,0">
+                                            <TextBlock Text="+3" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="0" FontSize="8" Foreground="#94A3B8" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-6" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-12" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-24" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-40" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        </UniformGrid>
+
+                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Height="170" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
+                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="170" VerticalAlignment="Center" />
                                     </Grid>
 
-                                    <TextBlock Grid.Row="3" Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,6,0,6" />
-                                    <ToggleButton Grid.Row="4" Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                                    <StackPanel Grid.Row="4" HorizontalAlignment="Center" Margin="0,4,0,6">
+                                        <TextBlock Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding DecibelsDisplay}" FontSize="9" Foreground="#94A3B8" HorizontalAlignment="Center" />
+                                    </StackPanel>
 
-                                    <Border Grid.Row="5" Background="#241530" CornerRadius="4" Padding="6,2" HorizontalAlignment="Center">
-                                        <TextBlock Text="AUXILIARY" FontSize="9" FontWeight="SemiBold" Foreground="#A855F7" />
+                                    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                                        <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,6,0" ToolTip="كتم القناة (Mute)" />
+                                        <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
+                                    </StackPanel>
+
+                                    <!-- Apps Mini Tray -->
+                                    <Border Grid.Row="6" Background="#241433" CornerRadius="6" Padding="6,4" MinHeight="26">
+                                        <ItemsControl ItemsSource="{Binding AssignedApps}" HorizontalAlignment="Center">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Width="18" Height="18" CornerRadius="4" Margin="2,0" Background="#361A4E" ToolTip="{Binding DisplayName}">
+                                                        <Image Source="{Binding Icon}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </Border>
                                 </Grid>
                             </Border>
 
-                            <!-- Channel 5: MIC (Amber #F59E0B) -->
-                            <Border Grid.Column="5" Background="#111520" CornerRadius="12" Padding="10,12" Margin="4,0,0,0" BorderBrush="#3D2910" BorderThickness="1">
+                            <!-- Channel 5: MIC (Amber Gold #F59E0B) -->
+                            <Border Grid.Column="5" Background="#16120C" CornerRadius="12" Padding="10,12" Margin="4,0,0,0" BorderBrush="#3D2910" BorderThickness="1">
                                 <Grid DataContext="{Binding Channels[5]}">
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
@@ -417,29 +649,58 @@
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,6">
-                                        <Path Data="{StaticResource IconMicrophone}" Stroke="#F59E0B" StrokeThickness="1.5" Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                                        <TextBlock Text="MIC" FontWeight="Bold" FontSize="12" Foreground="#F59E0B" HorizontalAlignment="Center" />
-                                    </StackPanel>
+                                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Path Data="{StaticResource IconMicrophone}" Stroke="#F59E0B" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="MIC" FontWeight="Bold" FontSize="12" Foreground="#F59E0B" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
 
-                                    <Border Grid.Row="1" Background="#0C0E14" CornerRadius="6" Padding="6,3" Margin="0,0,0,8">
-                                        <TextBlock Text="{Binding AssignedDeviceName}" FontSize="10" Foreground="#F59E0B" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    <Border Grid.Row="1" Margin="0,0,0,6">
+                                        <ComboBox Style="{StaticResource SonarDeviceComboBox}"
+                                                  ItemsSource="{Binding AvailableDevices}"
+                                                  SelectedItem="{Binding SelectedDevice}"
+                                                  ToolTip="اختر جهاز إدخال المايكروفون (Input Device)" />
                                     </Border>
 
-                                    <Grid Grid.Row="2" HorizontalAlignment="Center">
+                                    <Border Grid.Row="2" Background="#2D1E0C" CornerRadius="4" Padding="6,2" Margin="0,0,0,8" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding EndpointStatusText}" FontSize="9" FontWeight="SemiBold" Foreground="#FBBF24" />
+                                    </Border>
+
+                                    <Grid Grid.Row="3" HorizontalAlignment="Center" Margin="0,4,0,4">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="22" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
-                                        <Slider Grid.Column="0" Style="{StaticResource SonarVerticalFader}" Height="160" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
-                                        <ctrl:StereoVuMeter Grid.Column="1" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="160" VerticalAlignment="Center" />
+
+                                        <UniformGrid Grid.Column="0" Rows="7" Height="170" Margin="0,0,4,0">
+                                            <TextBlock Text="+3" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="0" FontSize="8" Foreground="#94A3B8" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-6" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-12" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-24" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-40" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        </UniformGrid>
+
+                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Height="170" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
+                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="170" VerticalAlignment="Center" />
                                     </Grid>
 
-                                    <TextBlock Grid.Row="3" Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" Margin="0,6,0,6" />
-                                    <ToggleButton Grid.Row="4" Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                                    <StackPanel Grid.Row="4" HorizontalAlignment="Center" Margin="0,4,0,6">
+                                        <TextBlock Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding DecibelsDisplay}" FontSize="9" Foreground="#94A3B8" HorizontalAlignment="Center" />
+                                    </StackPanel>
 
-                                    <Border Grid.Row="5" Background="#2B1D0C" CornerRadius="4" Padding="6,2" HorizontalAlignment="Center">
-                                        <TextBlock Text="BROADCAST MIC" FontSize="9" FontWeight="SemiBold" Foreground="#F59E0B" />
+                                    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                                        <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,6,0" ToolTip="كتم المايكروفون (Mute Mic)" />
+                                        <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل المايكروفون (Solo)" />
+                                    </StackPanel>
+
+                                    <!-- Bottom Label -->
+                                    <Border Grid.Row="6" Background="#26190A" CornerRadius="6" Padding="6,4">
+                                        <TextBlock Text="BROADCAST MIC" FontSize="9" FontWeight="SemiBold" Foreground="#F59E0B" HorizontalAlignment="Center" />
                                     </Border>
                                 </Grid>
                             </Border>

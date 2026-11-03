@@ -28,6 +28,8 @@ public class AudioSessionItem : ViewModelBase
     private readonly IAudioSession? _session;
     private string _assignedChannel = "Game";
     private ImageSource? _icon;
+    private bool _isMuted;
+    private float _volume = 100f;
 
     public int ProcessId => _session?.ProcessId ?? 0;
     public string DisplayName { get; init; } = string.Empty;
@@ -48,9 +50,10 @@ public class AudioSessionItem : ViewModelBase
 
     public float Volume
     {
-        get => (_session?.Volume ?? 1f) * 100f;
+        get => _session != null ? _session.Volume * 100f : _volume;
         set
         {
+            _volume = value;
             if (_session != null) _session.Volume = value / 100f;
             OnPropertyChanged();
         }
@@ -58,9 +61,10 @@ public class AudioSessionItem : ViewModelBase
 
     public bool IsMuted
     {
-        get => _session?.IsMuted ?? false;
+        get => _session != null ? _session.IsMuted : _isMuted;
         set
         {
+            _isMuted = value;
             if (_session != null) _session.IsMuted = value;
             OnPropertyChanged();
         }
@@ -75,6 +79,8 @@ public class AudioSessionItem : ViewModelBase
         ProcessName = session?.ProcessName ?? fallbackName;
         PillColorHex = pillColor;
         _assignedChannel = initialChannel;
+        _isMuted = session?.IsMuted ?? false;
+        _volume = session != null ? session.Volume * 100f : 100f;
         ToggleMuteCommand = new RelayCommand(() => IsMuted = !IsMuted);
 
         // Extract real app icon
@@ -154,18 +160,99 @@ public enum SonarChannelType
     Mic
 }
 
+public class AudioDeviceChoice : ViewModelBase
+{
+    public string Id { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
+    public string DisplayName { get; init; } = string.Empty;
+    public bool IsDefault { get; init; }
+    public bool IsVirtual { get; init; }
+    public string TagText => IsVirtual ? "VIRTUAL" : (IsDefault ? "DEFAULT" : "HARDWARE");
+    public IAudioEndpoint? Endpoint { get; init; }
+
+    public string ShortName
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Name)) return "Default";
+            if (Name.Contains("Sonar - Gaming", StringComparison.OrdinalIgnoreCase)) return "Sonar Gaming";
+            if (Name.Contains("Sonar - Chat", StringComparison.OrdinalIgnoreCase)) return "Sonar Chat";
+            if (Name.Contains("Sonar - Media", StringComparison.OrdinalIgnoreCase)) return "Sonar Media";
+            if (Name.Contains("Sonar - Aux", StringComparison.OrdinalIgnoreCase)) return "Sonar Aux";
+            if (Name.Contains("Sonar - Microphone", StringComparison.OrdinalIgnoreCase) || Name.Contains("Sonar - Mic", StringComparison.OrdinalIgnoreCase)) return "Sonar Mic";
+            if (Name.Contains("Sonar - Stream", StringComparison.OrdinalIgnoreCase)) return "Sonar Stream";
+            if (Name.Contains("Logitech G560", StringComparison.OrdinalIgnoreCase) || Name.Contains("G560", StringComparison.OrdinalIgnoreCase)) return "Logitech G560";
+            if (Name.Contains("Realtek", StringComparison.OrdinalIgnoreCase)) return "Realtek HD";
+            if (Name.Contains("Headset", StringComparison.OrdinalIgnoreCase)) return "Headset";
+            if (Name.Contains("Headphones", StringComparison.OrdinalIgnoreCase)) return "Headphones";
+
+            string clean = Name.Replace("Speakers (", "").Replace("Headphones (", "").Replace(")", "").Trim();
+            return clean.Length > 16 ? clean.Substring(0, 14) + ".." : clean;
+        }
+    }
+
+    public override string ToString() => ShortName;
+}
+
 public class SonarChannelStripItem : ViewModelBase
 {
     private float _volume = 85f;
     private bool _isMuted;
+    private bool _isSolo;
     private double _peakLevelLeft = 0.0;
     private double _peakLevelRight = 0.0;
     private string _presetName = "Custom";
     private string _assignedDeviceName = "Default Audio Device";
+    private AudioDeviceChoice? _selectedDevice;
+    private IAudioEndpoint? _boundEndpoint;
 
     public Action<float>? OnVolumeChanged { get; set; }
     public Action<bool>? OnMuteChanged { get; set; }
+    public Action<bool>? OnSoloChanged { get; set; }
+    public Action<AudioDeviceChoice?>? OnDeviceSelected { get; set; }
     public bool IsUpdatingSilently { get; set; }
+
+    public ObservableCollection<AudioDeviceChoice> AvailableDevices { get; } = new();
+
+    public AudioDeviceChoice? SelectedDevice
+    {
+        get => _selectedDevice;
+        set
+        {
+            if (SetProperty(ref _selectedDevice, value))
+            {
+                _boundEndpoint = value?.Endpoint;
+                AssignedDeviceName = value?.DisplayName ?? "Default Audio Device";
+                OnPropertyChanged(nameof(IsVirtualSource));
+                OnPropertyChanged(nameof(EndpointStatusText));
+                if (!IsUpdatingSilently) OnDeviceSelected?.Invoke(value);
+            }
+        }
+    }
+
+    public IAudioEndpoint? BoundEndpoint
+    {
+        get => _boundEndpoint;
+        set
+        {
+            if (SetProperty(ref _boundEndpoint, value))
+            {
+                OnPropertyChanged(nameof(IsVirtualSource));
+                OnPropertyChanged(nameof(EndpointStatusText));
+            }
+        }
+    }
+
+    public bool IsVirtualSource => _selectedDevice?.IsVirtual ?? false;
+
+    public string EndpointStatusText
+    {
+        get
+        {
+            if (_selectedDevice == null) return "غير متصل";
+            return _selectedDevice.IsVirtual ? "مسار افتراضي (Virtual Source)" : "منفذ أجهزة (Direct Hardware)";
+        }
+    }
 
     public double PeakLevelLeft
     {
@@ -192,6 +279,7 @@ public class SonarChannelStripItem : ViewModelBase
         {
             if (SetProperty(ref _volume, (float)Math.Round(value, 0)))
             {
+                OnPropertyChanged(nameof(DecibelsDisplay));
                 if (!IsUpdatingSilently) OnVolumeChanged?.Invoke(_volume);
             }
         }
@@ -206,8 +294,31 @@ public class SonarChannelStripItem : ViewModelBase
             {
                 OnPropertyChanged(nameof(PeakLevelLeft));
                 OnPropertyChanged(nameof(PeakLevelRight));
+                OnPropertyChanged(nameof(DecibelsDisplay));
                 if (!IsUpdatingSilently) OnMuteChanged?.Invoke(_isMuted);
             }
+        }
+    }
+
+    public bool IsSolo
+    {
+        get => _isSolo;
+        set
+        {
+            if (SetProperty(ref _isSolo, value))
+            {
+                if (!IsUpdatingSilently) OnSoloChanged?.Invoke(_isSolo);
+            }
+        }
+    }
+
+    public string DecibelsDisplay
+    {
+        get
+        {
+            if (_isMuted || _volume <= 0.01f) return "-inf dB";
+            double db = 20.0 * Math.Log10(Math.Max(0.001, _volume / 100.0));
+            return $"{db:0.0} dB";
         }
     }
 
@@ -226,6 +337,7 @@ public class SonarChannelStripItem : ViewModelBase
     public ObservableCollection<AudioSessionItem> AssignedApps { get; } = new();
 
     public ICommand ToggleMuteCommand { get; }
+    public ICommand ToggleSoloCommand { get; }
 
     public SonarChannelStripItem(SonarChannelType type, string title, string iconKey, string colorHex)
     {
@@ -234,6 +346,7 @@ public class SonarChannelStripItem : ViewModelBase
         IconKey = iconKey;
         ColorHex = colorHex;
         ToggleMuteCommand = new RelayCommand(() => IsMuted = !IsMuted);
+        ToggleSoloCommand = new RelayCommand(() => IsSolo = !IsSolo);
     }
 }
 
@@ -253,6 +366,14 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
     public bool EnablePersistence { get; set; } = !IsTestHost;
     public string StateFilePath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "NEXUS", "audio_state.json");
+
+    private string? _savedMasterDeviceId;
+    private string? _savedGameDeviceId;
+    private string? _savedChatDeviceId;
+    private string? _savedMediaDeviceId;
+    private string? _savedAuxDeviceId;
+    private string? _savedMicDeviceId;
+    private readonly Dictionary<string, string> _processRoutingMap = new(StringComparer.OrdinalIgnoreCase);
 
     // SteelSeries Sonar Studio Features
     private bool _isSpatialAudioEnabled = true;
@@ -516,65 +637,64 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         Channels.Add(auxCh);
         Channels.Add(micCh);
 
-        // Hardware audio binding to Windows Core Audio
-        masterCh.OnVolumeChanged = vol =>
+        // Hardware & Virtual Audio Binding per Channel (SteelSeries Sonar Independent Architecture)
+        foreach (var channel in Channels)
         {
-            if (_audioEngine.DefaultPlaybackDevice != null)
-            {
-                _audioEngine.DefaultPlaybackDevice.MasterVolume = vol / 100f;
-            }
-            SaveState();
-        };
-        masterCh.OnMuteChanged = muted =>
-        {
-            if (_audioEngine.DefaultPlaybackDevice != null)
-            {
-                _audioEngine.DefaultPlaybackDevice.IsMuted = muted;
-            }
-            SaveState();
-        };
-
-        micCh.OnVolumeChanged = vol =>
-        {
-            if (_audioEngine.DefaultRecordingDevice != null)
-            {
-                _audioEngine.DefaultRecordingDevice.MasterVolume = vol / 100f;
-            }
-            SaveState();
-        };
-        micCh.OnMuteChanged = muted =>
-        {
-            if (_audioEngine.DefaultRecordingDevice != null)
-            {
-                _audioEngine.DefaultRecordingDevice.IsMuted = muted;
-            }
-            SaveState();
-        };
-
-        Action<SonarChannelStripItem> wireUpAppChannel = ch =>
-        {
+            var ch = channel;
             ch.OnVolumeChanged = vol =>
             {
+                if (ch.BoundEndpoint != null)
+                {
+                    ch.BoundEndpoint.MasterVolume = vol / 100f;
+                }
+                else if (ch.ChannelType == SonarChannelType.Master && _audioEngine.DefaultPlaybackDevice != null)
+                {
+                    _audioEngine.DefaultPlaybackDevice.MasterVolume = vol / 100f;
+                }
+                else if (ch.ChannelType == SonarChannelType.Mic && _audioEngine.DefaultRecordingDevice != null)
+                {
+                    _audioEngine.DefaultRecordingDevice.MasterVolume = vol / 100f;
+                }
+
                 foreach (var app in ch.AssignedApps)
                 {
                     app.Volume = vol;
                 }
                 SaveState();
             };
+
             ch.OnMuteChanged = muted =>
             {
+                if (ch.BoundEndpoint != null)
+                {
+                    ch.BoundEndpoint.IsMuted = muted;
+                }
+                else if (ch.ChannelType == SonarChannelType.Master && _audioEngine.DefaultPlaybackDevice != null)
+                {
+                    _audioEngine.DefaultPlaybackDevice.IsMuted = muted;
+                }
+                else if (ch.ChannelType == SonarChannelType.Mic && _audioEngine.DefaultRecordingDevice != null)
+                {
+                    _audioEngine.DefaultRecordingDevice.IsMuted = muted;
+                }
+
                 foreach (var app in ch.AssignedApps)
                 {
                     app.IsMuted = muted;
                 }
                 SaveState();
             };
-        };
 
-        wireUpAppChannel(gameCh);
-        wireUpAppChannel(chatCh);
-        wireUpAppChannel(mediaCh);
-        wireUpAppChannel(auxCh);
+            ch.OnSoloChanged = solo =>
+            {
+                ApplySoloRouting();
+            };
+
+            ch.OnDeviceSelected = choice =>
+            {
+                SaveState();
+            };
+        }
 
         // 10 EQ Bands
         string[] freqLabels = { "31Hz", "63Hz", "125Hz", "250Hz", "500Hz", "1kHz", "2kHz", "4kHz", "8kHz", "16kHz" };
@@ -677,18 +797,78 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         }
     }
 
+    private void ApplySoloRouting()
+    {
+        bool anySolo = Channels.Any(c => c.IsSolo);
+        foreach (var ch in Channels)
+        {
+            if (anySolo)
+            {
+                bool shouldMute = !ch.IsSolo;
+                if (ch.BoundEndpoint != null)
+                {
+                    ch.BoundEndpoint.IsMuted = shouldMute || ch.IsMuted;
+                }
+                foreach (var app in ch.AssignedApps)
+                {
+                    app.IsMuted = shouldMute || ch.IsMuted;
+                }
+            }
+            else
+            {
+                if (ch.BoundEndpoint != null)
+                {
+                    ch.BoundEndpoint.IsMuted = ch.IsMuted;
+                }
+                foreach (var app in ch.AssignedApps)
+                {
+                    app.IsMuted = ch.IsMuted;
+                }
+            }
+        }
+    }
+
     private void OnMeterTick(object? sender, EventArgs e)
     {
         float masterPeak = _audioEngine.DefaultPlaybackDevice?.PeakLevel ?? 0f;
-        float micPeak = _audioEngine.DefaultRecordingDevice?.PeakLevel ?? 0f;
+        float micDefaultPeak = _audioEngine.DefaultRecordingDevice?.PeakLevel ?? 0f;
 
-        // Smooth VU meter animation with decay
-        UpdateChannelMeter(Channels[0], masterPeak * 100.0);
-        UpdateChannelMeter(Channels[1], masterPeak * (Channels[1].Volume / 100.0) * 95.0);
-        UpdateChannelMeter(Channels[2], masterPeak * (Channels[2].Volume / 100.0) * 85.0);
-        UpdateChannelMeter(Channels[3], masterPeak * (Channels[3].Volume / 100.0) * 90.0);
-        UpdateChannelMeter(Channels[4], masterPeak * (Channels[4].Volume / 100.0) * 75.0);
-        UpdateChannelMeter(Channels[5], micPeak * 100.0);
+        for (int i = 0; i < Channels.Count; i++)
+        {
+            var ch = Channels[i];
+            if (ch.IsMuted)
+            {
+                ch.PeakLevelLeft = Math.Max(0.0, ch.PeakLevelLeft * 0.75 - 2.0);
+                ch.PeakLevelRight = Math.Max(0.0, ch.PeakLevelRight * 0.75 - 2.0);
+                continue;
+            }
+
+            float endpointPeak = ch.BoundEndpoint?.PeakLevel ?? 0f;
+            double targetPeak = 0.0;
+
+            if (endpointPeak > 0.001f)
+            {
+                targetPeak = endpointPeak * 100.0;
+            }
+            else
+            {
+                if (ch.ChannelType == SonarChannelType.Master)
+                {
+                    targetPeak = masterPeak * 100.0;
+                }
+                else if (ch.ChannelType == SonarChannelType.Mic)
+                {
+                    targetPeak = micDefaultPeak * 100.0;
+                }
+                else if (masterPeak > 0.001f && ch.Volume > 0)
+                {
+                    double ratio = (ch.Volume / 100.0) * (0.80 + (i * 0.03));
+                    targetPeak = masterPeak * 100.0 * ratio;
+                }
+            }
+
+            UpdateChannelMeter(ch, targetPeak);
+        }
     }
 
     private static void UpdateChannelMeter(SonarChannelStripItem channel, double targetPeak)
@@ -700,7 +880,6 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        // Apply realistic stereo variance and instant attack / smooth decay
         double left = targetPeak;
         double right = targetPeak * 0.94;
 
@@ -714,29 +893,9 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         {
             await _audioEngine.RefreshDevicesAsync();
 
-            var defaultOut = _audioEngine.DefaultPlaybackDevice;
-            if (defaultOut != null)
-            {
-                string devName = defaultOut.Name.Length > 24 ? defaultOut.Name.Substring(0, 22) + "..." : defaultOut.Name;
-                int vol = (int)Math.Round(defaultOut.MasterVolume * 100);
-                string summary = $"{devName} ({vol}%)";
+            PopulateChannelDevices();
 
-                Channels[0].AssignedDeviceName = summary;
-                Channels[1].AssignedDeviceName = summary;
-                Channels[2].AssignedDeviceName = summary;
-                Channels[3].AssignedDeviceName = summary;
-                Channels[4].AssignedDeviceName = summary;
-            }
-
-            var defaultIn = _audioEngine.DefaultRecordingDevice;
-            if (defaultIn != null)
-            {
-                string devName = defaultIn.Name.Length > 24 ? defaultIn.Name.Substring(0, 22) + "..." : defaultIn.Name;
-                int vol = (int)Math.Round(defaultIn.MasterVolume * 100);
-                Channels[5].AssignedDeviceName = $"{devName} ({vol}%)";
-            }
-
-            // Sync active sessions
+            // Sync active sessions across all devices
             var sessions = _audioEngine.ActiveSessions;
             if (sessions.Count > 0)
             {
@@ -752,26 +911,41 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
                     string channelTarget = "Game Channel";
                     string pillColor = "#10B981";
 
-                    if (name.Contains("discord") || name.Contains("teams") || name.Contains("zoom") || name.Contains("skype"))
+                    if (_processRoutingMap.TryGetValue(s.ProcessName, out var savedTarget))
+                    {
+                        channelTarget = savedTarget;
+                    }
+                    else if (name.Contains("discord") || name.Contains("teams") || name.Contains("zoom") || name.Contains("skype"))
                     {
                         channelTarget = "Chat Channel";
-                        pillColor = "#00B4D8";
-                        chatSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Chat"));
                     }
                     else if (name.Contains("spotify") || name.Contains("chrome") || name.Contains("vlc") || name.Contains("msedge") || name.Contains("firefox"))
                     {
                         channelTarget = "Media Channel";
-                        pillColor = "#EC4899";
-                        mediaSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Media"));
                     }
                     else if (name.Contains("system") || name.Contains("wallpaper") || name.Contains("steam"))
                     {
                         channelTarget = "Aux Channel";
+                    }
+
+                    if (channelTarget.StartsWith("Chat", StringComparison.OrdinalIgnoreCase))
+                    {
+                        pillColor = "#00B4D8";
+                        chatSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Chat"));
+                    }
+                    else if (channelTarget.StartsWith("Media", StringComparison.OrdinalIgnoreCase))
+                    {
+                        pillColor = "#EC4899";
+                        mediaSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Media"));
+                    }
+                    else if (channelTarget.StartsWith("Aux", StringComparison.OrdinalIgnoreCase))
+                    {
                         pillColor = "#A855F7";
                         auxSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Aux"));
                     }
-                    else if (!name.Contains("idle") && !name.Contains("audiodg"))
+                    else
                     {
+                        pillColor = "#10B981";
                         gameSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Game"));
                     }
 
@@ -786,6 +960,125 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             }
         }
         catch { }
+    }
+
+    private void PopulateChannelDevices()
+    {
+        var playbacks = _audioEngine.PlaybackDevices;
+        var recordings = _audioEngine.RecordingDevices;
+
+        var playbackChoices = new List<AudioDeviceChoice>();
+        foreach (var dev in playbacks)
+        {
+            bool isVirtual = dev.Name.Contains("Sonar", StringComparison.OrdinalIgnoreCase) ||
+                             dev.Name.Contains("Virtual", StringComparison.OrdinalIgnoreCase) ||
+                             dev.Name.Contains("Cable", StringComparison.OrdinalIgnoreCase);
+
+            string tag = isVirtual ? " [Virtual]" : (dev.IsDefault ? " [Default]" : "");
+            playbackChoices.Add(new AudioDeviceChoice
+            {
+                Id = dev.Id,
+                Name = dev.Name,
+                DisplayName = $"{dev.Name}{tag}",
+                IsDefault = dev.IsDefault,
+                IsVirtual = isVirtual,
+                Endpoint = dev
+            });
+        }
+
+        var recordingChoices = new List<AudioDeviceChoice>();
+        foreach (var dev in recordings)
+        {
+            bool isVirtual = dev.Name.Contains("Sonar", StringComparison.OrdinalIgnoreCase) ||
+                             dev.Name.Contains("Virtual", StringComparison.OrdinalIgnoreCase);
+
+            string tag = isVirtual ? " [Virtual]" : (dev.IsDefault ? " [Default]" : "");
+            recordingChoices.Add(new AudioDeviceChoice
+            {
+                Id = dev.Id,
+                Name = dev.Name,
+                DisplayName = $"{dev.Name}{tag}",
+                IsDefault = dev.IsDefault,
+                IsVirtual = isVirtual,
+                Endpoint = dev
+            });
+        }
+
+        for (int i = 0; i < Math.Min(5, Channels.Count); i++)
+        {
+            SyncDeviceChoices(Channels[i].AvailableDevices, playbackChoices);
+        }
+
+        if (Channels.Count > 5)
+        {
+            SyncDeviceChoices(Channels[5].AvailableDevices, recordingChoices);
+        }
+
+        AutoBindChannelDevices();
+    }
+
+    private static void SyncDeviceChoices(ObservableCollection<AudioDeviceChoice> target, List<AudioDeviceChoice> source)
+    {
+        if (target.Count == source.Count && target.Select(t => t.Id).SequenceEqual(source.Select(s => s.Id)))
+        {
+            return;
+        }
+
+        target.Clear();
+        foreach (var item in source) target.Add(item);
+    }
+
+    private void AutoBindChannelDevices()
+    {
+        if (Channels.Count < 6) return;
+
+        BindChannelToBestDevice(Channels[0], _savedMasterDeviceId, "Speakers", "Headphones", "Default");
+        BindChannelToBestDevice(Channels[1], _savedGameDeviceId, "Sonar - Gaming", "Game", "Gaming");
+        BindChannelToBestDevice(Channels[2], _savedChatDeviceId, "Sonar - Chat", "Chat", "Headset");
+        BindChannelToBestDevice(Channels[3], _savedMediaDeviceId, "Sonar - Media", "Media", "G560");
+        BindChannelToBestDevice(Channels[4], _savedAuxDeviceId, "Sonar - Aux", "Aux");
+        BindChannelToBestDevice(Channels[5], _savedMicDeviceId, "Sonar - Microphone", "Microphone", "Mic");
+    }
+
+    private void BindChannelToBestDevice(SonarChannelStripItem channel, string? savedId, params string[] searchKeywords)
+    {
+        if (channel.AvailableDevices.Count == 0) return;
+
+        if (!string.IsNullOrEmpty(savedId))
+        {
+            var matched = channel.AvailableDevices.FirstOrDefault(d => d.Id == savedId);
+            if (matched != null)
+            {
+                if (channel.SelectedDevice?.Id != matched.Id)
+                {
+                    channel.SelectedDevice = matched;
+                }
+                return;
+            }
+        }
+
+        if (channel.SelectedDevice != null) return;
+
+        foreach (var kw in searchKeywords)
+        {
+            var matched = channel.AvailableDevices.FirstOrDefault(d => d.Name.Contains(kw, StringComparison.OrdinalIgnoreCase));
+            if (matched != null)
+            {
+                channel.SelectedDevice = matched;
+                return;
+            }
+        }
+
+        var def = channel.AvailableDevices.FirstOrDefault(d => d.IsDefault) ?? channel.AvailableDevices.FirstOrDefault();
+        channel.SelectedDevice = def;
+    }
+
+    public void AssignSessionToChannel(AudioSessionItem session, string targetChannel)
+    {
+        session.AssignedChannel = targetChannel;
+        _processRoutingMap[session.ProcessName] = targetChannel;
+        _ = RefreshAsync();
+        SaveState();
     }
 
     private static void SyncCollection<T>(ObservableCollection<T> target, List<T> source)
@@ -829,6 +1122,19 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
                 Channels[5].Volume = state.MicVolume;
                 Channels[5].IsMuted = state.MicMuted;
+            }
+
+            _savedMasterDeviceId = state.MasterDeviceId;
+            _savedGameDeviceId = state.GameDeviceId;
+            _savedChatDeviceId = state.ChatDeviceId;
+            _savedMediaDeviceId = state.MediaDeviceId;
+            _savedAuxDeviceId = state.AuxDeviceId;
+            _savedMicDeviceId = state.MicDeviceId;
+
+            if (state.ProcessRoutingMap != null)
+            {
+                _processRoutingMap.Clear();
+                foreach (var kvp in state.ProcessRoutingMap) _processRoutingMap[kvp.Key] = kvp.Value;
             }
 
             _isSpatialAudioEnabled = state.IsSpatialAudioEnabled;
@@ -891,6 +1197,14 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
                 MicVolume = Channels.Count > 5 ? Channels[5].Volume : 85f,
                 MicMuted = Channels.Count > 5 && Channels[5].IsMuted,
+
+                MasterDeviceId = Channels.Count > 0 ? Channels[0].SelectedDevice?.Id : null,
+                GameDeviceId = Channels.Count > 1 ? Channels[1].SelectedDevice?.Id : null,
+                ChatDeviceId = Channels.Count > 2 ? Channels[2].SelectedDevice?.Id : null,
+                MediaDeviceId = Channels.Count > 3 ? Channels[3].SelectedDevice?.Id : null,
+                AuxDeviceId = Channels.Count > 4 ? Channels[4].SelectedDevice?.Id : null,
+                MicDeviceId = Channels.Count > 5 ? Channels[5].SelectedDevice?.Id : null,
+                ProcessRoutingMap = new Dictionary<string, string>(_processRoutingMap),
 
                 SelectedPresetName = _selectedPreset?.Name ?? "CS2 / Warzone Footsteps",
                 EqualizerBandGains = EqualizerBands.Select(b => b.GainDb).ToArray(),

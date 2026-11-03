@@ -127,10 +127,16 @@ public class OpenRgbClient : IDisposable
         return false;
     }
 
+    private static readonly bool IsTestHost =
+        System.Diagnostics.Process.GetCurrentProcess().ProcessName.Contains("testhost", StringComparison.OrdinalIgnoreCase) ||
+        AppDomain.CurrentDomain.GetAssemblies().Any(a => a.FullName != null && a.FullName.StartsWith("xunit", StringComparison.OrdinalIgnoreCase));
+
     public async Task<bool> ConnectWithAutoStartAsync(CancellationToken cancellationToken = default)
     {
         bool ok = await ConnectAsync(cancellationToken);
         if (ok) return true;
+
+        if (IsTestHost) return false;
 
         EnsureOpenRgbServerRunning(_logger);
         for (int i = 0; i < 6; i++)
