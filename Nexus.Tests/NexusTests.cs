@@ -1050,5 +1050,104 @@ public class RgbStudio3DTests
             }
         }
     }
+
+    [Fact]
+    public void AudioStudio_ChannelStrips_InitializeCorrectly()
+    {
+        var mockAudioEngine = new Nexus.Engines.Audio.AudioEngine();
+        using var vm = new Nexus.App.ViewModels.AudioStudioViewModel(mockAudioEngine);
+
+        Assert.Equal(6, vm.Channels.Count);
+        Assert.Equal("MASTER", vm.Channels[0].Title);
+        Assert.Equal("GAME", vm.Channels[1].Title);
+        Assert.Equal("CHAT", vm.Channels[2].Title);
+        Assert.Equal("MEDIA", vm.Channels[3].Title);
+        Assert.Equal("AUX", vm.Channels[4].Title);
+        Assert.Equal("MIC", vm.Channels[5].Title);
+
+        Assert.Equal(85f, vm.Channels[0].Volume);
+        Assert.Equal(80f, vm.Channels[1].Volume);
+        Assert.Equal(85f, vm.Channels[2].Volume);
+    }
+
+    [Fact]
+    public void AudioStudio_ChatMix_CalculatesAttenuationCorrectly()
+    {
+        var mockAudioEngine = new Nexus.Engines.Audio.AudioEngine();
+        using var vm = new Nexus.App.ViewModels.AudioStudioViewModel(mockAudioEngine);
+
+        // Balanced
+        vm.ChatMixValue = 50.0;
+        Assert.Equal(80f, vm.Channels[1].Volume);
+        Assert.Equal(85f, vm.Channels[2].Volume);
+
+        // 25% ChatMix -> Chat attenuated to 50%
+        vm.ChatMixValue = 25.0;
+        Assert.Equal(80f, vm.Channels[1].Volume);
+        Assert.Equal(42f, vm.Channels[2].Volume);
+
+        // 75% ChatMix -> Game attenuated to 50%
+        vm.ChatMixValue = 75.0;
+        Assert.Equal(40f, vm.Channels[1].Volume);
+        Assert.Equal(85f, vm.Channels[2].Volume);
+    }
+
+    [Fact]
+    public void AudioStudio_TabNavigation_SwitchesProperly()
+    {
+        var mockAudioEngine = new Nexus.Engines.Audio.AudioEngine();
+        using var vm = new Nexus.App.ViewModels.AudioStudioViewModel(mockAudioEngine);
+
+        Assert.Equal("Mixer", vm.SelectedTopTab);
+        vm.SelectTabCommand.Execute("Game EQ");
+        Assert.Equal("Game EQ", vm.SelectedTopTab);
+        vm.SelectTabCommand.Execute("Mic Studio");
+        Assert.Equal("Mic Studio", vm.SelectedTopTab);
+    }
+
+    [Fact]
+    public void AudioStudio_StatePersistence_SavesAndRestoresJson()
+    {
+        string tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"nexus_audio_test_{Guid.NewGuid():N}.json");
+        try
+        {
+            var mockAudioEngine = new Nexus.Engines.Audio.AudioEngine();
+            using var vm1 = new Nexus.App.ViewModels.AudioStudioViewModel(mockAudioEngine);
+            vm1.EnablePersistence = true;
+            vm1.StateFilePath = tempFile;
+
+            vm1.ChatMixValue = 60.0;
+            vm1.Channels[0].Volume = 92f;
+            vm1.Channels[1].Volume = 65f;
+            vm1.SelectedTopTab = "Mic Studio";
+            vm1.MicGainDb = 4.5f;
+            vm1.NoiseGateThresholdDb = -40.0f;
+            vm1.SaveState();
+
+            Assert.True(System.IO.File.Exists(tempFile));
+
+            // Fresh instance simulating app restart
+            using var vm2 = new Nexus.App.ViewModels.AudioStudioViewModel(mockAudioEngine);
+            vm2.EnablePersistence = true;
+            vm2.StateFilePath = tempFile;
+
+            var method = typeof(Nexus.App.ViewModels.AudioStudioViewModel).GetMethod("LoadSavedState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            method?.Invoke(vm2, null);
+
+            Assert.Equal(92f, vm2.Channels[0].Volume);
+            Assert.Equal(65f, vm2.Channels[1].Volume);
+            Assert.Equal(60.0, vm2.ChatMixValue);
+            Assert.Equal("Mic Studio", vm2.SelectedTopTab);
+            Assert.Equal(4.5f, vm2.MicGainDb);
+            Assert.Equal(-40.0f, vm2.NoiseGateThresholdDb);
+        }
+        finally
+        {
+            if (System.IO.File.Exists(tempFile))
+            {
+                System.IO.File.Delete(tempFile);
+            }
+        }
+    }
 }
 
