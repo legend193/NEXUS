@@ -1,0 +1,83 @@
+<UserControl x:Class="Nexus.App.Views.PluginsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Nexus.App.ViewModels"
+             mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance vm:PluginsViewModel}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,16,0">
+        <StackPanel Margin="0,0,0,24">
+            
+            <!-- HEADER -->
+            <Grid Margin="0,0,0,20">
+                <StackPanel>
+                    <TextBlock Text="Hardware Integrations &amp; Vendor Plugins" Style="{StaticResource HeaderLarge}" Margin="0,0,0,4" />
+                    <TextBlock Text="Modular hardware communication drivers. Graceful fallback when proprietary vendor SDKs are offline." Style="{StaticResource TextSubtle}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- PLUGINS LIST -->
+            <ItemsControl ItemsSource="{Binding Plugins}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource InteractiveGlassCard}" Margin="0,0,0,14" Padding="18">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0">
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <Border Background="{StaticResource AccentGlowBrush}" CornerRadius="6" Padding="8,3" Margin="0,0,8,0">
+                                            <TextBlock Text="{Binding Manufacturer}" Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="Bold" />
+                                        </Border>
+                                        <Border Background="{StaticResource CardBgBrush}" CornerRadius="6" Padding="8,3">
+                                            <TextBlock Text="{Binding Version, StringFormat={}v{0}}" Style="{StaticResource TextSubtle}" FontSize="11" />
+                                        </Border>
+                                    </StackPanel>
+
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,4" />
+                                    <TextBlock Text="{Binding Description}" Style="{StaticResource TextSubtle}" FontSize="12" Margin="0,0,0,12" />
+
+                                    <!-- Supported Devices Tags -->
+                                    <ItemsControl ItemsSource="{Binding SupportedDevices}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{StaticResource CardBgBrush}" CornerRadius="6" Padding="8,4" Margin="0,0,6,6"
+                                                        BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                                    <TextBlock Text="{Binding}" Style="{StaticResource TextSubtle}" FontSize="11" FontWeight="Medium" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+
+                                <!-- Status & Toggle -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                    <Button Style="{StaticResource NexusPillButton}"
+                                            Command="{Binding DataContext.TogglePluginCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"
+                                            Padding="14,8">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="8" Height="8" Fill="{StaticResource SuccessBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Status}" Foreground="{StaticResource TextPrimaryBrush}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,10 @@
+<Solution>
+  <Project Path="Nexus.Abstractions/Nexus.Abstractions.csproj" />
+  <Project Path="Nexus.App/Nexus.App.csproj" />
+  <Project Path="Nexus.Core/Nexus.Core.csproj" />
+  <Project Path="Nexus.Engines/Nexus.Engines.csproj" />
+  <Project Path="Nexus.Integrations/Nexus.Integrations.csproj" />
+  <Project Path="Nexus.Service/Nexus.Service.csproj" />
+  <Project Path="Nexus.Storage/Nexus.Storage.csproj" />
+  <Project Path="Nexus.Tests/Nexus.Tests.csproj" />
+</Solution>

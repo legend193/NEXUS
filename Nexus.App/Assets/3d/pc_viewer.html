@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS 3D PC Rig Viewer</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background-color: #0D111A;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        #canvas-container {
+            width: 100%; height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+        }
+        #loading-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(13, 17, 26, 0.95);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 10;
+            transition: opacity 0.4s ease;
+        }
+        .spinner {
+            width: 44px; height: 44px;
+            border: 3px solid rgba(0, 210, 255, 0.2);
+            border-top-color: #00D2FF;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 14px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text {
+            color: #A0AEC0; font-size: 12px; font-weight: 600;
+            letter-spacing: 1px; text-transform: uppercase;
+        }
+        #hud-controls {
+            position: absolute;
+            bottom: 12px; right: 12px;
+            display: flex; gap: 8px;
+            z-index: 5;
+        }
+        .hud-btn {
+            background: rgba(22, 27, 38, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #E2E8F0;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+        }
+        .hud-btn:hover {
+            background: rgba(0, 210, 255, 0.2);
+            border-color: #00D2FF;
+            color: #00D2FF;
+        }
+        #device-tooltip {
+            position: absolute;
+            top: 12px; left: 12px;
+            background: rgba(16, 21, 31, 0.85);
+            border: 1px solid rgba(0, 210, 255, 0.4);
+            border-radius: 6px;
+            padding: 6px 12px;
+            color: #00D2FF;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            pointer-events: none;
+            backdrop-filter: blur(8px);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading Lian Li O11 EVO 3D Rig...</div>
+    </div>
+
+    <div id="canvas-container"></div>
+    <div id="device-tooltip">Device Name</div>
+
+    <div id="hud-controls">
+        <button class="hud-btn" id="btn-autorotate" onclick="toggleAutoRotate()">Auto-Rotate: ON</button>
+        <button class="hud-btn" onclick="resetCamera()">Reset View</button>
+    </div>
+
+    <script src="three.min.js"></script>
+    <script src="OrbitControls.js"></script>
+    <script src="GLTFLoader.js"></script>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let rigModel = null;
+        let isAutoRotate = true;
+        let currentEffect = 'Static';
+        let effectSpeed = 1.0;
+        let effectTime = 0;
+
+        // Categories mapped to mesh collections
+        const deviceMeshMap = {
+            'ram': [],
+            'gpu': [],
+            'cooler': [],
+            'lianli': [],
+            'mb': [],
+            'case': []
+        };
+
+        const activeColors = {
+            'ram': new THREE.Color('#00D2FF'),
+            'gpu': new THREE.Color('#00D2FF'),
+            'cooler': new THREE.Color('#00D2FF'),
+            'lianli': new THREE.Color('#00D2FF'),
+            'mb': new THREE.Color('#00D2FF'),
+            'case': new THREE.Color('#00D2FF')
+        };
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let hoveredMesh = null;
+        let selectedDevice = null;
+
+        // --- Corsair iCUE ELITE LCD Display Dynamic Canvas ---
+        const lcdCanvas = document.createElement('canvas');
+        lcdCanvas.width = 512;
+        lcdCanvas.height = 512;
+        const lcdCtx = lcdCanvas.getContext('2d');
+        const lcdTexture = new THREE.CanvasTexture(lcdCanvas);
+        if (THREE.SRGBColorSpace) lcdTexture.colorSpace = THREE.SRGBColorSpace;
+        else lcdTexture.encoding = THREE.sRGBEncoding;
+
+        let aioLcdScreenMesh = null;
+        let aioLcdRingMesh = null;
+        let currentLcdMode = 'CpuTempGauge';
+        let currentLcdVal = 48;
+        let currentLcdAccent = '#00D2FF';
+        let currentLcdHalo = '#00D2FF';
+        let customLcdImage = null;
+        let customLcdImgPath = '';
+
+        init();
+        animate();
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            // 1. Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0D111A);
+
+            // 2. Camera (Isometric 45-degree angle)
+            camera = new THREE.PerspectiveCamera(42, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(2.4, 1.6, 2.8);
+
+            // 3. Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.25;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            container.appendChild(renderer.domElement);
+
+            // 4. Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 1.0;
+            controls.maxDistance = 6.0;
+            controls.maxPolarAngle = Math.PI / 2 + 0.05; // Prevent viewing strictly from underneath
+            controls.target.set(0, 0.25, 0);
+
+            controls.addEventListener('start', () => {
+                isAutoRotate = false;
+                updateAutoRotateButton();
+            });
+
+            // 5. Studio Lighting
+            const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.85);
+            scene.add(ambientLight);
+
+            const keyLight = new THREE.DirectionalLight(0xE2F0FF, 1.4);
+            keyLight.position.set(3, 4, 3);
+            scene.add(keyLight);
+
+            const fillLight = new THREE.DirectionalLight(0x7B92B2, 0.9);
+            fillLight.position.set(-3, 2, -2);
+            scene.add(fillLight);
+
+            const rimLight = new THREE.DirectionalLight(0x00D2FF, 0.6);
+            rimLight.position.set(0, 3, -3);
+            scene.add(rimLight);
+
+            // 6. Subtle Ground Shadow Plane
+            const groundGeo = new THREE.PlaneGeometry(10, 10);
+            const groundMat = new THREE.ShadowMaterial({ opacity: 0.3 });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -0.55;
+            scene.add(ground);
+
+            // 7. Load GLTF 2.0 Model
+            const loader = new THREE.GLTFLoader();
+            loader.load('LianLi_O11_EVO_Custom_PC.glb', (gltf) => {
+                rigModel = gltf.scene;
+
+                // Center and scale model
+                const box = new THREE.Box3().setFromObject(rigModel);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 1.8 / maxDim;
+
+                rigModel.scale.set(scale, scale, scale);
+                rigModel.position.x = -center.x * scale;
+                rigModel.position.y = -center.y * scale + 0.25;
+                rigModel.position.z = -center.z * scale;
+
+                // Process Materials and Mesh Groups
+                rigModel.traverse((child) => {
+                    if (child.isMesh) {
+                        const name = child.name;
+                        const matName = child.material ? child.material.name : '';
+
+                        // Configure Tempered Glass
+                        if (name.includes('Glass') || matName.includes('Glass')) {
+                            child.material = new THREE.MeshPhysicalMaterial({
+                                color: new THREE.Color(0x0a1018),
+                                metalness: 0.1,
+                                roughness: 0.1,
+                                transmission: 0.75,
+                                transparent: true,
+                                opacity: 0.35,
+                                ior: 1.5,
+                                depthWrite: false
+                            });
+                        }
+
+                        // Map RGB Zones and create glowing emissive materials
+                        if (name.includes('RGB') || matName.includes('RGB')) {
+                            // Check for Corsair AIO Pump LCD Screen vs Halo Ring
+                            if (name.includes('AIO_Pump_Logo') || name.includes('Pump_Logo') || name.includes('Pump_Screen')) {
+                                aioLcdScreenMesh = child;
+                                child.material = new THREE.MeshStandardMaterial({
+                                    map: lcdTexture,
+                                    emissiveMap: lcdTexture,
+                                    emissive: new THREE.Color(0xffffff),
+                                    emissiveIntensity: 1.6,
+                                    roughness: 0.15,
+                                    metalness: 0.05
+                                });
+                                renderLcdCanvas();
+                                // Keep LCD screen mesh separate from generic cooler RGB so colors never overwrite it
+                                return;
+                            }
+
+                            if (name.includes('AIO_Pump_Ring') || name.includes('Pump_Ring')) {
+                                aioLcdRingMesh = child;
+                            }
+
+                            const initialColor = activeColors['ram'] || new THREE.Color(0x00D2FF);
+                            const clonedMat = new THREE.MeshStandardMaterial({
+                                color: initialColor,
+                                emissive: initialColor,
+                                emissiveIntensity: 2.5,
+                                roughness: 0.25,
+                                metalness: 0.1
+                            });
+                            child.material = clonedMat;
+
+                            if (name.includes('RAM') || matName.includes('RAM')) {
+                                deviceMeshMap['ram'].push(child);
+                            } else if (name.includes('GPU') || matName.includes('GPU')) {
+                                deviceMeshMap['gpu'].push(child);
+                            } else if (name.includes('AIO') || matName.includes('AIO')) {
+                                deviceMeshMap['cooler'].push(child);
+                            } else if (name.includes('Fan') || matName.includes('Fan')) {
+                                deviceMeshMap['lianli'].push(child);
+                            } else if (name.includes('MB') || matName.includes('MB')) {
+                                deviceMeshMap['mb'].push(child);
+                            } else if (name.includes('Case') || matName.includes('Case')) {
+                                deviceMeshMap['case'].push(child);
+                            }
+                        }
+                    }
+                });
+
+                scene.add(rigModel);
+
+                // Hide loader
+                const overlay = document.getElementById('loading-overlay');
+                overlay.style.opacity = '0';
+                setTimeout(() => { overlay.style.display = 'none'; }, 200);
+
+                // Notify C# WPF host that 3D model is ready to receive active colors
+                if (window.chrome && window.chrome.webview) {
+                    window.chrome.webview.postMessage(JSON.stringify({ type: 'model_ready' }));
+                }
+
+            }, undefined, (error) => {
+                console.error('Error loading 3D model:', error);
+                document.querySelector('.loading-text').innerText = 'Failed to load 3D model';
+            });
+
+            // 8. Event Listeners
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('click', onClick);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function onPointerMove(event) {
+            const container = document.getElementById('canvas-container');
+            const rect = container.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / container.clientWidth) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / container.clientHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            if (!rigModel) return;
+
+            const intersects = raycaster.intersectObjects(rigModel.children, true);
+            const tooltip = document.getElementById('device-tooltip');
+
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                const devKey = getDeviceKeyFromMesh(hit);
+                if (devKey) {
+                    tooltip.innerText = getFriendlyName(devKey);
+                    tooltip.style.opacity = '1';
+                    document.body.style.cursor = 'pointer';
+                    return;
+                }
+            }
+            tooltip.style.opacity = '0';
+            document.body.style.cursor = 'default';
+        }
+
+        function onClick(event) {
+            raycaster.setFromCamera(mouse, camera);
+            if (!rigModel) return;
+
+            const intersects = raycaster.intersectObjects(rigModel.children, true);
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                const devKey = getDeviceKeyFromMesh(hit);
+                if (devKey) {
+                    selectDevice(devKey);
+                }
+            }
+        }
+
+        function getDeviceKeyFromMesh(mesh) {
+            const name = mesh.name;
+            const matName = mesh.material ? mesh.material.name : '';
+            if (name.includes('RAM') || matName.includes('RAM')) return 'ram';
+            if (name.includes('GPU') || matName.includes('GPU')) return 'gpu';
+            if (name.includes('AIO') || matName.includes('AIO')) return 'cooler';
+            if (name.includes('Fan') || matName.includes('Fan')) return 'lianli';
+            if (name.includes('MB') || matName.includes('MB')) return 'mb';
+            if (name.includes('Case') || matName.includes('Case')) return 'case';
+            return null;
+        }
+
+        function getFriendlyName(key) {
+            switch (key) {
+                case 'ram': return 'Corsair VENGEANCE RGB RT (4x 8GB)';
+                case 'gpu': return 'MSI GeForce RTX 3080 Gaming X Trio';
+                case 'cooler': return 'Corsair H150i Capellix AIO Cooler';
+                case 'lianli': return 'Lian Li UNI FAN AL120 Fans';
+                case 'mb': return 'Gigabyte X570S AORUS PRO AX Motherboard';
+                case 'case': return 'Lian Li O11 Dynamic EVO Case Strip';
+                default: return 'PC Component';
+            }
+        }
+
+        function selectDevice(devKey) {
+            selectedDevice = devKey;
+
+            // Flash selection feedback
+            if (deviceMeshMap[devKey]) {
+                deviceMeshMap[devKey].forEach(m => {
+                    if (m.material) {
+                        const orig = m.material.emissiveIntensity;
+                        m.material.emissiveIntensity = 4.5;
+                        setTimeout(() => { m.material.emissiveIntensity = 2.2; }, 300);
+                    }
+                });
+            }
+
+            // Post message to WPF C# host
+            if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage(JSON.stringify({
+                    type: 'device_selected',
+                    deviceId: devKey
+                }));
+            }
+        }
+
+        // --- PUBLIC INTEROP API CALLED FROM C# ---
+
+        function resolveDeviceKey(key) {
+            if (!key) return 'all';
+            key = key.toLowerCase();
+            if (key === 'all' || key === 'global') return 'all';
+            if (key.includes('ram') || key.includes('memory') || key.includes('vengeance')) return 'ram';
+            if (key.includes('gpu') || key.includes('rtx') || key.includes('msi') || key.includes('display')) return 'gpu';
+            if (key.includes('cooler') || key.includes('pump') || key.includes('aio') || key.includes('capellix') || key.includes('corsair')) return 'cooler';
+            if (key.includes('lianli') || key.includes('fan') || key.includes('al120')) return 'lianli';
+            if (key.includes('mb') || key.includes('motherboard') || key.includes('aorus') || key.includes('gigabyte')) return 'mb';
+            if (key.includes('case') || key.includes('strip') || key.includes('chassis')) return 'case';
+            return 'all';
+        }
+
+        function applyColorToMesh(mesh, col, intensity = 2.5) {
+            if (!mesh || !mesh.material || mesh === aioLcdScreenMesh) return;
+            mesh.material.emissive.copy(col);
+            mesh.material.color.copy(col);
+            mesh.material.emissiveIntensity = intensity;
+            mesh.material.needsUpdate = true;
+        }
+
+        // --- AIO LCD RENDERING ROUTINE ---
+        function renderLcdCanvas() {
+            if (!lcdCtx) return;
+            const w = 512, h = 512, cx = 256, cy = 256;
+
+            lcdCtx.save();
+            lcdCtx.clearRect(0, 0, w, h);
+
+            // Circular screen background with dark radial vignette
+            const bgGrad = lcdCtx.createRadialGradient(cx, cy, 30, cx, cy, 256);
+            bgGrad.addColorStop(0, '#0d1527');
+            bgGrad.addColorStop(0.7, '#070b14');
+            bgGrad.addColorStop(1, '#03050a');
+            lcdCtx.fillStyle = bgGrad;
+            lcdCtx.beginPath();
+            lcdCtx.arc(cx, cy, 254, 0, Math.PI * 2);
+            lcdCtx.fill();
+
+            // Decorative outer tech ring
+            lcdCtx.strokeStyle = '#152033';
+            lcdCtx.lineWidth = 4;
+            lcdCtx.beginPath();
+            lcdCtx.arc(cx, cy, 240, 0, Math.PI * 2);
+            lcdCtx.stroke();
+
+            // Outer tick marks
+            for (let i = 0; i < 48; i++) {
+                const angle = (i / 48) * Math.PI * 2;
+                const r1 = (i % 4 === 0) ? 228 : 234;
+                const r2 = 238;
+                const x1 = cx + Math.cos(angle) * r1;
+                const y1 = cy + Math.sin(angle) * r1;
+                const x2 = cx + Math.cos(angle) * r2;
+                const y2 = cy + Math.sin(angle) * r2;
+                lcdCtx.strokeStyle = (i % 4 === 0) ? currentLcdAccent : '#1e293b';
+                lcdCtx.lineWidth = (i % 4 === 0) ? 3 : 1.5;
+                lcdCtx.beginPath();
+                lcdCtx.moveTo(x1, y1);
+                lcdCtx.lineTo(x2, y2);
+                lcdCtx.stroke();
+            }
+
+            if (currentLcdMode === 'CpuTempGauge' || currentLcdMode === 'GpuTempGauge' || currentLcdMode === 'CoolantTempGauge') {
+                const isCpu = currentLcdMode === 'CpuTempGauge';
+                const isGpu = currentLcdMode === 'GpuTempGauge';
+                const label = isCpu ? 'CPU TEMP' : (isGpu ? 'GPU TEMP' : 'COOLANT TEMP');
+                const sub = isCpu ? 'AMD RYZEN 9 5900X' : (isGpu ? 'MSI RTX 3080 GAMING X' : 'CORSAIR H150i ELITE');
+                const val = Math.max(20, Math.min(100, currentLcdVal));
+
+                const startAngle = 0.75 * Math.PI;
+                const totalSweep = 1.5 * Math.PI;
+                const endAngle = startAngle + totalSweep;
+                const sweepAngle = startAngle + totalSweep * (val / 100);
+
+                // Track Background
+                lcdCtx.strokeStyle = '#111a2e';
+                lcdCtx.lineWidth = 18;
+                lcdCtx.lineCap = 'round';
+                lcdCtx.beginPath();
+                lcdCtx.arc(cx, cy, 185, startAngle, endAngle);
+                lcdCtx.stroke();
+
+                // Active Arc
+                lcdCtx.shadowColor = currentLcdAccent;
+                lcdCtx.shadowBlur = 18;
+                lcdCtx.strokeStyle = currentLcdAccent;
+                lcdCtx.lineWidth = 18;
+                lcdCtx.beginPath();
+                lcdCtx.arc(cx, cy, 185, startAngle, sweepAngle);
+                lcdCtx.stroke();
+                lcdCtx.shadowBlur = 0;
+
+                // Value Text
+                lcdCtx.textAlign = 'center';
+                lcdCtx.textBaseline = 'middle';
+                lcdCtx.font = '900 86px Inter, "Segoe UI", sans-serif';
+                lcdCtx.fillStyle = '#ffffff';
+                lcdCtx.shadowColor = currentLcdAccent;
+                lcdCtx.shadowBlur = 12;
+                lcdCtx.fillText(val + '°C', cx, cy - 15);
+                lcdCtx.shadowBlur = 0;
+
+                // Mode Title
+                lcdCtx.font = 'bold 20px Inter, "Segoe UI", sans-serif';
+                lcdCtx.fillStyle = currentLcdAccent;
+                lcdCtx.fillText(label, cx, cy + 48);
+
+                // Subtitle
+                lcdCtx.font = '600 13px Inter, monospace';
+                lcdCtx.fillStyle = '#64748b';
+                lcdCtx.fillText(sub, cx, cy + 78);
+
+                // Bottom badge
+                lcdCtx.font = 'bold 11px Inter, sans-serif';
+                lcdCtx.fillStyle = '#38bdf8';
+                lcdCtx.fillText('NEXUS AUTONOMOUS COOLING', cx, cy + 130);
+
+            } else if (currentLcdMode === 'NexusLogo') {
+                // Official 3D Isometric NEXUS Emblem
+                lcdCtx.save();
+                lcdCtx.translate(cx - 130, cy - 130);
+                const scaleFactor = 260 / 512;
+                lcdCtx.scale(scaleFactor, scaleFactor);
+
+                // Left Face
+                const gLeft = lcdCtx.createLinearGradient(293, 483, 100, 80);
+                gLeft.addColorStop(0, '#004EFF');
+                gLeft.addColorStop(1, '#00FFFF');
+                lcdCtx.fillStyle = gLeft;
+                lcdCtx.beginPath();
+                lcdCtx.moveTo(42.667, 127.979);
+                lcdCtx.lineTo(264.363, 0);
+                lcdCtx.lineTo(264.363, 512);
+                lcdCtx.lineTo(42.667, 384);
+                lcdCtx.closePath();
+                lcdCtx.fill();
+
+                // Right / Bottom Face
+                const gRight = lcdCtx.createLinearGradient(42.667, 384, 486.08, 384);
+                gRight.addColorStop(0, '#0000AA');
+                gRight.addColorStop(1, '#A78DFF');
+                lcdCtx.fillStyle = gRight;
+                lcdCtx.beginPath();
+                lcdCtx.moveTo(264.363, 512);
+                lcdCtx.lineTo(42.667, 384);
+                lcdCtx.lineTo(264.363, 256);
+                lcdCtx.lineTo(486.08, 384);
+                lcdCtx.closePath();
+                lcdCtx.fill();
+
+                // Ridge Spine Highlights
+                lcdCtx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                lcdCtx.lineWidth = 4;
+                lcdCtx.beginPath();
+                lcdCtx.moveTo(264.363, 256);
+                lcdCtx.lineTo(264.363, 512);
+                lcdCtx.moveTo(42.667, 384);
+                lcdCtx.lineTo(264.363, 256);
+                lcdCtx.moveTo(264.363, 256);
+                lcdCtx.lineTo(486.08, 384);
+                lcdCtx.stroke();
+                lcdCtx.restore();
+
+                lcdCtx.textAlign = 'center';
+                lcdCtx.textBaseline = 'middle';
+                lcdCtx.font = '900 32px Inter, sans-serif';
+                lcdCtx.fillStyle = '#ffffff';
+                lcdCtx.shadowColor = '#00D2FF';
+                lcdCtx.shadowBlur = 14;
+                lcdCtx.fillText('NEXUS', cx, cy + 145);
+                lcdCtx.shadowBlur = 0;
+                lcdCtx.font = 'bold 12px Inter, sans-serif';
+                lcdCtx.fillStyle = '#00D2FF';
+                lcdCtx.fillText('ECOSYSTEM ENGINE', cx, cy + 175);
+
+            } else if (currentLcdMode === 'DigitalClock') {
+                const now = new Date();
+                const hh = String(now.getHours()).padStart(2, '0');
+                const mm = String(now.getMinutes()).padStart(2, '0');
+                const ss = String(now.getSeconds()).padStart(2, '0');
+                const timeStr = `${hh}:${mm}:${ss}`;
+                const dateStr = now.toISOString().slice(0, 10);
+
+                const secAngle = ((now.getSeconds() + now.getMilliseconds() / 1000) / 60) * Math.PI * 2 - Math.PI / 2;
+                const dotX = cx + Math.cos(secAngle) * 200;
+                const dotY = cy + Math.sin(secAngle) * 200;
+                lcdCtx.fillStyle = currentLcdAccent;
+                lcdCtx.shadowColor = currentLcdAccent;
+                lcdCtx.shadowBlur = 15;
+                lcdCtx.beginPath();
+                lcdCtx.arc(dotX, dotY, 9, 0, Math.PI * 2);
+                lcdCtx.fill();
+                lcdCtx.shadowBlur = 0;
+
+                lcdCtx.textAlign = 'center';
+                lcdCtx.textBaseline = 'middle';
+                lcdCtx.font = '900 76px Inter, "Consolas", monospace';
+                lcdCtx.fillStyle = '#ffffff';
+                lcdCtx.shadowColor = currentLcdAccent;
+                lcdCtx.shadowBlur = 16;
+                lcdCtx.fillText(timeStr, cx, cy - 10);
+                lcdCtx.shadowBlur = 0;
+
+                lcdCtx.font = 'bold 20px Inter, sans-serif';
+                lcdCtx.fillStyle = currentLcdAccent;
+                lcdCtx.fillText(dateStr, cx, cy + 50);
+
+                lcdCtx.font = 'bold 12px Inter, monospace';
+                lcdCtx.fillStyle = '#64748b';
+                lcdCtx.fillText('PRECISION SYSTEM CLOCK', cx, cy + 85);
+
+            } else if (currentLcdMode === 'ArcReactor') {
+                const rot = effectTime * 1.5;
+                const pulse = Math.sin(effectTime * 3.0) * 0.2 + 1.0;
+
+                const count = 10;
+                for (let i = 0; i < count; i++) {
+                    const a = rot + (i / count) * Math.PI * 2;
+                    lcdCtx.save();
+                    lcdCtx.translate(cx, cy);
+                    lcdCtx.rotate(a);
+                    lcdCtx.fillStyle = '#0284c7';
+                    lcdCtx.shadowColor = currentLcdAccent;
+                    lcdCtx.shadowBlur = 10;
+                    lcdCtx.fillRect(140, -12, 35, 24);
+                    lcdCtx.restore();
+                }
+
+                lcdCtx.strokeStyle = currentLcdAccent;
+                lcdCtx.shadowColor = currentLcdAccent;
+                lcdCtx.shadowBlur = 25 * pulse;
+                lcdCtx.lineWidth = 8;
+                lcdCtx.beginPath();
+                lcdCtx.arc(cx, cy, 115, 0, Math.PI * 2);
+                lcdCtx.stroke();
+
+                lcdCtx.strokeStyle = '#ffffff';
+                lcdCtx.lineWidth = 4;
+                lcdCtx.beginPath();
+                lcdCtx.arc(cx, cy, 80, 0, Math.PI * 2);
+                lcdCtx.stroke();
+
+                const coreGrad = lcdCtx.createRadialGradient(cx, cy, 5, cx, cy, 60);
+                coreGrad.addColorStop(0, '#ffffff');
+                coreGrad.addColorStop(0.5, currentLcdAccent);
+                coreGrad.addColorStop(1, 'rgba(0, 180, 255, 0)');
+                lcdCtx.fillStyle = coreGrad;
+                lcdCtx.beginPath();
+                lcdCtx.arc(cx, cy, 60 * pulse, 0, Math.PI * 2);
+                lcdCtx.fill();
+
+                lcdCtx.textAlign = 'center';
+                lcdCtx.textBaseline = 'middle';
+                lcdCtx.font = 'bold 14px Inter, monospace';
+                lcdCtx.fillStyle = '#ffffff';
+                lcdCtx.fillText('ARC REACTOR MK-IV', cx, cy + 155);
+
+            } else if (currentLcdMode === 'CustomImage' && customLcdImage) {
+                lcdCtx.save();
+                lcdCtx.beginPath();
+                lcdCtx.arc(cx, cy, 235, 0, Math.PI * 2);
+                lcdCtx.clip();
+                lcdCtx.drawImage(customLcdImage, 16, 16, 480, 480);
+                lcdCtx.restore();
+
+                lcdCtx.strokeStyle = currentLcdAccent;
+                lcdCtx.shadowColor = currentLcdAccent;
+                lcdCtx.shadowBlur = 15;
+                lcdCtx.lineWidth = 6;
+                lcdCtx.beginPath();
+                lcdCtx.arc(cx, cy, 235, 0, Math.PI * 2);
+                lcdCtx.stroke();
+            } else if (currentLcdMode === 'CustomImage') {
+                lcdCtx.textAlign = 'center';
+                lcdCtx.textBaseline = 'middle';
+                lcdCtx.font = 'bold 24px Inter, sans-serif';
+                lcdCtx.fillStyle = '#94a3b8';
+                lcdCtx.fillText('اختر صورة أو ملف GIF', cx, cy - 10);
+                lcdCtx.font = '14px Inter, sans-serif';
+                lcdCtx.fillStyle = currentLcdAccent;
+                lcdCtx.fillText('من مركز التخصيص', cx, cy + 25);
+            }
+
+            lcdCtx.restore();
+            lcdTexture.needsUpdate = true;
+        }
+
+        window.updateAioLcd = function(mode, val, accentHex, imgSrc, haloColor) {
+            if (mode) currentLcdMode = mode;
+            if (val !== undefined && val !== null) currentLcdVal = val;
+            if (accentHex) currentLcdAccent = accentHex;
+            if (haloColor) currentLcdHalo = haloColor;
+
+            if (aioLcdRingMesh) {
+                applyColorToMesh(aioLcdRingMesh, new THREE.Color(currentLcdHalo), 2.8);
+            }
+
+            if (imgSrc && imgSrc !== customLcdImgPath) {
+                customLcdImgPath = imgSrc;
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = function() {
+                    customLcdImage = img;
+                    renderLcdCanvas();
+                };
+                img.src = imgSrc;
+            } else {
+                renderLcdCanvas();
+            }
+        };
+
+        window.updateZoneColor = function(deviceKey, hexColor, effectName) {
+            if (effectName) currentEffect = effectName;
+            const resolved = resolveDeviceKey(deviceKey);
+            if (resolved === 'all') {
+                window.updateAllColors(hexColor, effectName);
+                return;
+            }
+
+            const col = new THREE.Color(hexColor);
+            activeColors[resolved] = col;
+
+            if (deviceMeshMap[resolved]) {
+                deviceMeshMap[resolved].forEach(m => applyColorToMesh(m, col, 2.5));
+            }
+        };
+
+        window.updateAllColors = function(hexColor, effectName) {
+            if (effectName) currentEffect = effectName;
+            const col = new THREE.Color(hexColor);
+            Object.keys(activeColors).forEach(k => {
+                activeColors[k] = col;
+                if (deviceMeshMap[k]) {
+                    deviceMeshMap[k].forEach(m => applyColorToMesh(m, col, 2.5));
+                }
+            });
+        };
+
+        window.setEffect = function(effectName, speed) {
+            currentEffect = effectName || 'Static';
+            if (speed) effectSpeed = speed;
+        };
+
+        window.resetCamera = function() {
+            camera.position.set(2.4, 1.6, 2.8);
+            controls.target.set(0, 0.25, 0);
+            controls.update();
+        };
+
+        function toggleAutoRotate() {
+            isAutoRotate = !isAutoRotate;
+            updateAutoRotateButton();
+        }
+
+        function updateAutoRotateButton() {
+            const btn = document.getElementById('btn-autorotate');
+            btn.innerText = `Auto-Rotate: ${isAutoRotate ? 'ON' : 'OFF'}`;
+            btn.style.color = isAutoRotate ? '#00D2FF' : '#A0AEC0';
+        }
+
+        // --- ANIMATION LOOP ---
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            effectTime += 0.02 * effectSpeed;
+
+            // Handle Dynamic Effects
+            if (currentLcdMode === 'DigitalClock' || currentLcdMode === 'ArcReactor') {
+                renderLcdCanvas();
+            }
+
+            if (currentEffect === 'Rainbow') {
+                const hue = (effectTime * 0.15) % 1.0;
+                Object.keys(deviceMeshMap).forEach((k, idx) => {
+                    const devHue = (hue + idx * 0.12) % 1.0;
+                    const c = new THREE.Color().setHSL(devHue, 1.0, 0.5);
+                    deviceMeshMap[k].forEach(m => applyColorToMesh(m, c, 2.5));
+                });
+            } else if (currentEffect === 'Breathing') {
+                const pulse = 1.0 + Math.sin(effectTime * 2.5) * 1.5;
+                const clampedIntensity = Math.max(0.2, pulse);
+                Object.keys(deviceMeshMap).forEach(k => {
+                    const baseCol = activeColors[k] || new THREE.Color('#00D2FF');
+                    deviceMeshMap[k].forEach(m => {
+                        if (m.material) {
+                            m.material.emissive.copy(baseCol);
+                            m.material.color.copy(baseCol);
+                            m.material.emissiveIntensity = clampedIntensity;
+                        }
+                    });
+                });
+            } else if (currentEffect === 'Wave' || currentEffect === 'ColorCycle') {
+                Object.keys(deviceMeshMap).forEach((k, idx) => {
+                    const phase = Math.sin(effectTime * 2.0 + idx * 0.8) * 0.5 + 0.5;
+                    const baseCol = activeColors[k] || new THREE.Color('#00D2FF');
+                    const targetCol = new THREE.Color('#8A2BE2');
+                    const blended = baseCol.clone().lerp(targetCol, phase);
+                    deviceMeshMap[k].forEach(m => applyColorToMesh(m, blended, 2.5));
+                });
+            }
+
+            if (currentLcdMode === 'DigitalClock' || currentLcdMode === 'ArcReactor') {
+                renderLcdCanvas();
+            }
+
+            // Smooth Auto-Rotate
+            if (isAutoRotate && controls) {
+                controls.autoRotate = true;
+                controls.autoRotateSpeed = 0.8;
+            } else if (controls) {
+                controls.autoRotate = false;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

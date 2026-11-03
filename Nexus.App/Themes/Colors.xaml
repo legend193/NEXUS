@@ -1,0 +1,93 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options">
+
+    <!-- Dark Obsidian & Cyber Glass Theme Tokens -->
+    <Color x:Key="WindowBgColor">#0B0D12</Color>
+    <SolidColorBrush x:Key="WindowBgBrush" Color="{StaticResource WindowBgColor}" po:Freeze="True" />
+
+    <Color x:Key="SidebarBgColor">#0E1017</Color>
+    <SolidColorBrush x:Key="SidebarBgBrush" Color="{StaticResource SidebarBgColor}" po:Freeze="True" />
+
+    <Color x:Key="ChannelStripBgColor">#131620</Color>
+    <SolidColorBrush x:Key="ChannelStripBgBrush" Color="{StaticResource ChannelStripBgColor}" po:Freeze="True" />
+
+    <Color x:Key="CardBgColor">#12151E</Color>
+    <SolidColorBrush x:Key="CardBgBrush" Color="{StaticResource CardBgColor}" po:Freeze="True" />
+
+    <Color x:Key="CardHoverColor">#181C28</Color>
+    <SolidColorBrush x:Key="CardHoverBrush" Color="{StaticResource CardHoverColor}" po:Freeze="True" />
+
+    <Color x:Key="SurfaceColor">#151824</Color>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" po:Freeze="True" />
+
+    <Color x:Key="CardGlassBgColor">#E612151E</Color>
+    <SolidColorBrush x:Key="CardGlassBgBrush" Color="{StaticResource CardGlassBgColor}" po:Freeze="True" />
+
+    <!-- Borders & Dividers -->
+    <Color x:Key="BorderSubtleColor">#1F2536</Color>
+    <SolidColorBrush x:Key="BorderSubtleBrush" Color="{StaticResource BorderSubtleColor}" po:Freeze="True" />
+
+    <Color x:Key="BorderActiveColor">#2E374D</Color>
+    <SolidColorBrush x:Key="BorderActiveBrush" Color="{StaticResource BorderActiveColor}" po:Freeze="True" />
+
+    <!-- Accents: Neon Cyan, Sonar Orange, Cyber Purple, Amber Gold -->
+    <Color x:Key="AccentColor">#00D2FF</Color>
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" po:Freeze="True" />
+
+    <Color x:Key="AccentGlowColor">#3300D2FF</Color>
+    <SolidColorBrush x:Key="AccentGlowBrush" Color="{StaticResource AccentGlowColor}" po:Freeze="True" />
+
+    <Color x:Key="SonarOrangeColor">#FF5500</Color>
+    <SolidColorBrush x:Key="SonarOrangeBrush" Color="{StaticResource SonarOrangeColor}" po:Freeze="True" />
+
+    <Color x:Key="SonarOrangeGlowColor">#33FF5500</Color>
+    <SolidColorBrush x:Key="SonarOrangeGlowBrush" Color="{StaticResource SonarOrangeGlowColor}" po:Freeze="True" />
+
+    <Color x:Key="AccentPurpleColor">#8A2BE2</Color>
+    <SolidColorBrush x:Key="AccentPurpleBrush" Color="{StaticResource AccentPurpleColor}" po:Freeze="True" />
+
+    <Color x:Key="AmberGoldColor">#FFB703</Color>
+    <SolidColorBrush x:Key="AmberGoldBrush" Color="{StaticResource AmberGoldColor}" po:Freeze="True" />
+
+    <Color x:Key="EmeraldGreenColor">#00E676</Color>
+    <SolidColorBrush x:Key="EmeraldGreenBrush" Color="{StaticResource EmeraldGreenColor}" po:Freeze="True" />
+
+    <!-- Fader / Audio Meter Colors (Green -> Amber -> Red) -->
+    <Color x:Key="MeterGreenColor">#00E676</Color>
+    <SolidColorBrush x:Key="MeterGreenBrush" Color="{StaticResource MeterGreenColor}" po:Freeze="True" />
+
+    <Color x:Key="MeterYellowColor">#FFD600</Color>
+    <SolidColorBrush x:Key="MeterYellowBrush" Color="{StaticResource MeterYellowColor}" po:Freeze="True" />
+
+    <Color x:Key="MeterRedColor">#FF1744</Color>
+    <SolidColorBrush x:Key="MeterRedBrush" Color="{StaticResource MeterRedColor}" po:Freeze="True" />
+
+    <!-- Typography -->
+    <Color x:Key="TextPrimaryColor">#F1F5F9</Color>
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" po:Freeze="True" />
+
+    <Color x:Key="TextSecondaryColor">#94A3B8</Color>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" po:Freeze="True" />
+
+    <Color x:Key="TextMutedColor">#5C677D</Color>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}" po:Freeze="True" />
+
+    <!-- Statuses -->
+    <Color x:Key="SuccessColor">#00E676</Color>
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" po:Freeze="True" />
+
+    <Color x:Key="WarningColor">#F59E0B</Color>
+    <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" po:Freeze="True" />
+
+    <Color x:Key="DangerColor">#EF4444</Color>
+    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" po:Freeze="True" />
+
+    <!-- ToggleSwitch Frozen Brushes for Cross-Thread Safety -->
+    <SolidColorBrush x:Key="ToggleCheckedBrush" Color="#00D2FF" po:Freeze="True" />
+    <SolidColorBrush x:Key="ToggleThumbBrush" Color="#FFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="ToggleUncheckedTrackBrush" Color="#1F2536" po:Freeze="True" />
+    <SolidColorBrush x:Key="ToggleThumbUncheckedBrush" Color="#94A3B8" po:Freeze="True" />
+    <SolidColorBrush x:Key="ToggleTrackBorderBrush" Color="#2E374D" po:Freeze="True" />
+
+</ResourceDictionary>
