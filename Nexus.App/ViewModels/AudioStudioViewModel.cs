@@ -705,14 +705,15 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
             ch.OnDeviceSelected = choice =>
             {
+                if (choice == null) return;
                 switch (ch.ChannelType)
                 {
-                    case SonarChannelType.Master: _savedMasterDeviceId = choice?.Id; break;
-                    case SonarChannelType.Game: _savedGameDeviceId = choice?.Id; break;
-                    case SonarChannelType.Chat: _savedChatDeviceId = choice?.Id; break;
-                    case SonarChannelType.Media: _savedMediaDeviceId = choice?.Id; break;
-                    case SonarChannelType.Aux: _savedAuxDeviceId = choice?.Id; break;
-                    case SonarChannelType.Mic: _savedMicDeviceId = choice?.Id; break;
+                    case SonarChannelType.Master: _savedMasterDeviceId = choice.Id; break;
+                    case SonarChannelType.Game: _savedGameDeviceId = choice.Id; break;
+                    case SonarChannelType.Chat: _savedChatDeviceId = choice.Id; break;
+                    case SonarChannelType.Media: _savedMediaDeviceId = choice.Id; break;
+                    case SonarChannelType.Aux: _savedAuxDeviceId = choice.Id; break;
+                    case SonarChannelType.Mic: _savedMicDeviceId = choice.Id; break;
                 }
                 SaveState();
             };
@@ -827,10 +828,15 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             if (anySolo)
             {
                 bool shouldMute = !ch.IsSolo;
-                if (ch.BoundEndpoint != null)
+                if (ch.ChannelType == SonarChannelType.Master && ch.BoundEndpoint != null)
                 {
                     ch.BoundEndpoint.IsMuted = shouldMute || ch.IsMuted;
                 }
+                else if (ch.IsVirtualSource && ch.BoundEndpoint != null)
+                {
+                    ch.BoundEndpoint.IsMuted = shouldMute || ch.IsMuted;
+                }
+
                 foreach (var app in ch.AssignedApps)
                 {
                     app.IsMuted = shouldMute || ch.IsMuted;
@@ -838,16 +844,22 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             }
             else
             {
-                if (ch.BoundEndpoint != null)
+                if (ch.ChannelType == SonarChannelType.Master && ch.BoundEndpoint != null)
                 {
                     ch.BoundEndpoint.IsMuted = ch.IsMuted;
                 }
+                else if (ch.IsVirtualSource && ch.BoundEndpoint != null)
+                {
+                    ch.BoundEndpoint.IsMuted = ch.IsMuted;
+                }
+
                 foreach (var app in ch.AssignedApps)
                 {
                     app.IsMuted = ch.IsMuted;
                 }
             }
         }
+        SaveState();
     }
 
     private void OnMeterTick(object? sender, EventArgs e)
@@ -1025,26 +1037,45 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
         for (int i = 0; i < Math.Min(5, Channels.Count); i++)
         {
-            SyncDeviceChoices(Channels[i].AvailableDevices, playbackChoices);
+            SyncDeviceChoices(Channels[i], playbackChoices);
         }
 
         if (Channels.Count > 5)
         {
-            SyncDeviceChoices(Channels[5].AvailableDevices, recordingChoices);
+            SyncDeviceChoices(Channels[5], recordingChoices);
         }
 
         AutoBindChannelDevices();
     }
 
-    private static void SyncDeviceChoices(ObservableCollection<AudioDeviceChoice> target, List<AudioDeviceChoice> source)
+    private static void SyncDeviceChoices(SonarChannelStripItem channel, List<AudioDeviceChoice> source)
     {
+        var target = channel.AvailableDevices;
         if (target.Count == source.Count && target.Select(t => t.Id).SequenceEqual(source.Select(s => s.Id)))
         {
             return;
         }
 
-        target.Clear();
-        foreach (var item in source) target.Add(item);
+        string? currentSelectedId = channel.SelectedDevice?.Id;
+        channel.IsUpdatingSilently = true;
+        try
+        {
+            target.Clear();
+            foreach (var item in source) target.Add(item);
+
+            if (!string.IsNullOrEmpty(currentSelectedId))
+            {
+                var reMatch = target.FirstOrDefault(d => d.Id == currentSelectedId);
+                if (reMatch != null)
+                {
+                    channel.SelectedDevice = reMatch;
+                }
+            }
+        }
+        finally
+        {
+            channel.IsUpdatingSilently = false;
+        }
     }
 
     private void AutoBindChannelDevices()
@@ -1052,7 +1083,7 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         if (Channels.Count < 6) return;
 
         BindChannelToBestDevice(Channels[0], _savedMasterDeviceId, "Speakers", "Headphones", "Default");
-        BindChannelToBestDevice(Channels[1], _savedGameDeviceId, "Sonar - Gaming", "Game", "Gaming");
+        BindChannelToBestDevice(Channels[1], _savedGameDeviceId, "Sonar - Gaming", "Gaming", "Game");
         BindChannelToBestDevice(Channels[2], _savedChatDeviceId, "Sonar - Chat", "Chat", "Headset");
         BindChannelToBestDevice(Channels[3], _savedMediaDeviceId, "Sonar - Media", "Media", "G560");
         BindChannelToBestDevice(Channels[4], _savedAuxDeviceId, "Sonar - Aux", "Aux");
@@ -1070,7 +1101,9 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             {
                 if (channel.SelectedDevice?.Id != matched.Id)
                 {
-                    channel.SelectedDevice = matched;
+                    channel.IsUpdatingSilently = true;
+                    try { channel.SelectedDevice = matched; }
+                    finally { channel.IsUpdatingSilently = false; }
                 }
                 return;
             }
@@ -1087,13 +1120,17 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             var matched = channel.AvailableDevices.FirstOrDefault(d => d.Name.Contains(kw, StringComparison.OrdinalIgnoreCase));
             if (matched != null)
             {
-                channel.SelectedDevice = matched;
+                channel.IsUpdatingSilently = true;
+                try { channel.SelectedDevice = matched; }
+                finally { channel.IsUpdatingSilently = false; }
                 return;
             }
         }
 
         var def = channel.AvailableDevices.FirstOrDefault(d => d.IsDefault) ?? channel.AvailableDevices.FirstOrDefault();
-        channel.SelectedDevice = def;
+        channel.IsUpdatingSilently = true;
+        try { channel.SelectedDevice = def; }
+        finally { channel.IsUpdatingSilently = false; }
     }
 
     public void AssignSessionToChannel(AudioSessionItem session, string targetChannel)

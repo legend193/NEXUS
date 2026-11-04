@@ -76,7 +76,7 @@ public class LianLiUniFanController : IRgbDevice, IDisposable
     {
         _openRgbClient = client;
         _openRgbDeviceIndex = deviceIndex;
-        _openRgbLedCount = ledCount > 0 ? ledCount : 32;
+        _openRgbLedCount = Math.Clamp(ledCount, 1, 64);
         Status = DeviceConnectionStatus.Connected;
         _logger?.LogInformation("Lian Li UNI FAN Hub successfully attached OpenRGB Client [{Index}] ({Leds} LEDs)", deviceIndex, _openRgbLedCount);
     }

@@ -217,9 +217,40 @@
             ground.position.y = -0.55;
             scene.add(ground);
 
-            // 7. Load GLTF 2.0 Model
+            // 7. Initial Load GLTF 2.0 Model
+            loadRigModel('LianLi_O11_EVO_Custom_PC.glb', false);
+
+            // 8. Event Listeners
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('click', onClick);
+        }
+
+        let isCurrent2DMode = false;
+
+        function loadRigModel(modelFile, is2D) {
+            isCurrent2DMode = is2D;
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                overlay.style.opacity = '1';
+                document.querySelector('.loading-text').innerText = is2D ? 'Loading 2D Component Layout...' : 'Loading Lian Li O11 EVO 3D Rig...';
+            }
+
+            if (rigModel) {
+                scene.remove(rigModel);
+                rigModel = null;
+            }
+
+            // Reset mesh maps
+            for (let k in deviceMeshMap) {
+                deviceMeshMap[k] = [];
+            }
+            aioLcdScreenMesh = null;
+            aioLcdRingMesh = null;
+
             const loader = new THREE.GLTFLoader();
-            loader.load('LianLi_O11_EVO_Custom_PC.glb', (gltf) => {
+            loader.load(modelFile, (gltf) => {
                 rigModel = gltf.scene;
 
                 // Center and scale model
@@ -231,7 +262,7 @@
 
                 rigModel.scale.set(scale, scale, scale);
                 rigModel.position.x = -center.x * scale;
-                rigModel.position.y = -center.y * scale + 0.25;
+                rigModel.position.y = -center.y * scale + (is2D ? 0.1 : 0.25);
                 rigModel.position.z = -center.z * scale;
 
                 // Process Materials and Mesh Groups
@@ -255,7 +286,7 @@
                                     roughness: 0.08,
                                     transmission: 0.82,
                                     transparent: true,
-                                    opacity: 0.35,
+                                    opacity: is2D ? 0.15 : 0.35,
                                     ior: 1.5,
                                     depthWrite: false
                                 });
@@ -283,7 +314,6 @@
                                     metalness: 0.05
                                 });
                                 renderLcdCanvas();
-                                // Keep LCD screen mesh separate from generic cooler RGB so colors never overwrite it
                                 return;
                             }
 
@@ -326,26 +356,56 @@
 
                 scene.add(rigModel);
 
-                // Hide loader
-                const overlay = document.getElementById('loading-overlay');
-                overlay.style.opacity = '0';
-                setTimeout(() => { overlay.style.display = 'none'; }, 200);
+                // Camera orientation based on mode
+                if (is2D) {
+                    camera.position.set(0, 0, 3.1);
+                    controls.target.set(0, 0, 0);
+                    isAutoRotate = false;
+                    const rotateBtn = document.getElementById('btn-autorotate');
+                    if (rotateBtn) rotateBtn.innerText = 'Auto-Rotate: OFF';
+                } else {
+                    camera.position.set(2.4, 1.4, 2.6);
+                    controls.target.set(0, 0, 0);
+                    isAutoRotate = true;
+                    const rotateBtn = document.getElementById('btn-autorotate');
+                    if (rotateBtn) rotateBtn.innerText = 'Auto-Rotate: ON';
+                }
+                controls.update();
 
-                // Notify C# WPF host that 3D model is ready to receive active colors
+                // Re-apply active colors
+                for (let dev in activeColors) {
+                    const col = activeColors[dev];
+                    if (deviceMeshMap[dev]) {
+                        deviceMeshMap[dev].forEach(m => applyColorToMesh(m, col));
+                    }
+                }
+
+                // Hide loader
+                if (overlay) {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => { overlay.style.display = 'none'; }, 200);
+                }
+
+                // Notify C# WPF host that model is ready
                 if (window.chrome && window.chrome.webview) {
-                    window.chrome.webview.postMessage(JSON.stringify({ type: 'model_ready' }));
+                    window.chrome.webview.postMessage(JSON.stringify({ type: 'model_ready', mode: is2D ? '2d' : '3d' }));
                 }
 
             }, undefined, (error) => {
-                console.error('Error loading 3D model:', error);
-                document.querySelector('.loading-text').innerText = 'Failed to load 3D model';
+                console.error('Error loading model:', error);
+                if (overlay) {
+                    document.querySelector('.loading-text').innerText = 'Failed to load model';
+                }
             });
-
-            // 8. Event Listeners
-            window.addEventListener('resize', onWindowResize);
-            window.addEventListener('pointermove', onPointerMove);
-            window.addEventListener('click', onClick);
         }
+
+        window.switchRigMode = function(mode) {
+            if (mode === '2d') {
+                loadRigModel('LianLi_O11_EVO_Separated.glb', true);
+            } else {
+                loadRigModel('LianLi_O11_EVO_Custom_PC.glb', false);
+            }
+        };
 
         function onWindowResize() {
             const container = document.getElementById('canvas-container');

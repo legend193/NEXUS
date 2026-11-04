@@ -112,8 +112,9 @@ public class RgbZone
     {
         ZoneId = zoneId;
         Name = name;
-        LedCount = ledCount;
-        CurrentColors = new RgbColor[ledCount];
+        // Hard sanity limit: PC RGB devices never exceed 512 LEDs. Prevents catastrophic allocations.
+        LedCount = Math.Clamp(ledCount, 1, 512);
+        CurrentColors = new RgbColor[LedCount];
         Array.Fill(CurrentColors, RgbColor.Black);
     }
 }

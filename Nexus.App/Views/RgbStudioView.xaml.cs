@@ -58,6 +58,7 @@ public partial class RgbStudioView : UserControl
             _vm = vm;
             _vm.LightingUpdated += OnLightingUpdated;
             _vm.AioLcdUpdated += OnAioLcdUpdated;
+            _vm.PropertyChanged += OnVmPropertyChanged;
         }
 
         await Initialize3DViewportAsync();
@@ -69,6 +70,7 @@ public partial class RgbStudioView : UserControl
         {
             _vm.LightingUpdated -= OnLightingUpdated;
             _vm.AioLcdUpdated -= OnAioLcdUpdated;
+            _vm.PropertyChanged -= OnVmPropertyChanged;
         }
 
         // Safely detach shared WebView2 from this view without disposing it
@@ -80,6 +82,21 @@ public partial class RgbStudioView : UserControl
         if (_currentActiveView == this)
         {
             _currentActiveView = null;
+        }
+    }
+
+    private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(RgbStudioViewModel.Is3dModeActive))
+        {
+            Dispatcher.InvokeAsync(async () =>
+            {
+                if (_sharedRigWebView?.CoreWebView2 != null && _isSharedWebViewInitialized)
+                {
+                    string mode = _vm?.Is3dModeActive == true ? "3d" : "2d";
+                    await _sharedRigWebView.CoreWebView2.ExecuteScriptAsync($"if (window.switchRigMode) window.switchRigMode('{mode}');");
+                }
+            });
         }
     }
 

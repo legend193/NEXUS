@@ -63,11 +63,18 @@ public class iCueDeviceCanvasItem : ViewModelBase
     }
 }
 
-public class AioLcdModeItem
+public class AioLcdModeItem : ViewModelBase
 {
+    private bool _isSelected;
     public AioLcdMode Mode { get; init; }
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set => SetProperty(ref _isSelected, value);
+    }
 }
 
 public class RgbColorPresetItem
@@ -159,9 +166,18 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
                 OnPropertyChanged(nameof(LcdPreviewPrimaryText));
                 OnPropertyChanged(nameof(LcdPreviewUnitText));
                 OnPropertyChanged(nameof(LcdPreviewSubtitleText));
+                UpdateLcdModesSelection();
                 ApplyLcdSettings();
                 SaveState();
             }
+        }
+    }
+
+    public void UpdateLcdModesSelection()
+    {
+        foreach (var mode in AvailableLcdModes)
+        {
+            mode.IsSelected = (mode.Mode == _selectedLcdMode);
         }
     }
 
@@ -307,8 +323,18 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
     public bool Is3dModeActive
     {
         get => _is3dModeActive;
-        set => SetProperty(ref _is3dModeActive, value);
+        set
+        {
+            if (SetProperty(ref _is3dModeActive, value))
+            {
+                OnPropertyChanged(nameof(ViewportModeTitle));
+                OnPropertyChanged(nameof(ViewportModeBadge));
+            }
+        }
     }
+
+    public string ViewportModeTitle => Is3dModeActive ? "3D Interactive Rig" : "2D Separated Components";
+    public string ViewportModeBadge => Is3dModeActive ? "تجميعة 3D الكاملة" : "المكونات المفصولة 2D";
 
     public event Action<string, string, string>? LightingUpdated;
 
@@ -620,6 +646,7 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
         AvailableLcdModes.Add(new AioLcdModeItem { Mode = AioLcdMode.DigitalClock, Name = "الساعة الرقمية", Description = "توقيت نظام مباشر ودقيق مع حركة مدارية تفاعلية" });
         AvailableLcdModes.Add(new AioLcdModeItem { Mode = AioLcdMode.ArcReactor, Name = "مفاعل الطاقة (Arc)", Description = "قلب مفاعل توني ستارك المستقبلي بدوائر طاقة نيون" });
         AvailableLcdModes.Add(new AioLcdModeItem { Mode = AioLcdMode.CustomImage, Name = "صورة / GIF مخصص", Description = "عرض أي صورة مخصصة أو رسم متحرك على شاشة المبرد" });
+        UpdateLcdModesSelection();
 
         // Initialize LCD Color Presets
         LcdColorPresets.Add(new RgbColorPresetItem { Name = "Cyber Cyan", HexColor = "#00D2FF" });

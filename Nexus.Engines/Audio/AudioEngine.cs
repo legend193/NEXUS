@@ -240,7 +240,31 @@ public class AudioEngine : IAudioEngine, IDisposable
         "nexus.app",
         "nexus",
         "idle",
-        "system"
+        "system",
+        "msedgewebview2",
+        "explorer",
+        "runtimebroker",
+        "backgroundtaskhost",
+        "gamebar",
+        "gamebarft",
+        "widgetservice",
+        "widgets",
+        "sihost",
+        "ctfmon",
+        "powershell",
+        "cmd",
+        "devenv",
+        "code",
+        "antigravity",
+        "git",
+        "vssvc",
+        "spoolsv",
+        "lsass",
+        "csrss",
+        "services",
+        "winlogon",
+        "fontdrvhost",
+        "dwm"
     };
 
     public Task RefreshSessionsAsync()

@@ -310,7 +310,8 @@
                             </Border>
 
                             <!-- Channel 1: GAME (Emerald #10B981) -->
-                            <Border Grid.Column="1" Background="#0F1517" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#1C382B" BorderThickness="1">
+                            <Border Grid.Column="1" Background="#0F1517" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#1C382B" BorderThickness="1"
+                                    AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Game Channel">
                                 <Grid DataContext="{Binding Channels[1]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -398,7 +399,8 @@
                             </Border>
 
                             <!-- Channel 2: CHAT (Electric Cyan #00B4D8) -->
-                            <Border Grid.Column="2" Background="#0C141A" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#163442" BorderThickness="1">
+                            <Border Grid.Column="2" Background="#0C141A" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#163442" BorderThickness="1"
+                                    AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Chat Channel">
                                 <Grid DataContext="{Binding Channels[2]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -486,7 +488,8 @@
                             </Border>
 
                             <!-- Channel 3: MEDIA (Neon Pink #EC4899) -->
-                            <Border Grid.Column="3" Background="#140F18" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#3B1C2E" BorderThickness="1">
+                            <Border Grid.Column="3" Background="#140F18" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#3B1C2E" BorderThickness="1"
+                                    AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Media Channel">
                                 <Grid DataContext="{Binding Channels[3]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -574,7 +577,8 @@
                             </Border>
 
                             <!-- Channel 4: AUX (Studio Purple #A855F7) -->
-                            <Border Grid.Column="4" Background="#120F1A" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#341E47" BorderThickness="1">
+                            <Border Grid.Column="4" Background="#120F1A" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="#341E47" BorderThickness="1"
+                                    AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Aux Channel">
                                 <Grid DataContext="{Binding Channels[4]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
