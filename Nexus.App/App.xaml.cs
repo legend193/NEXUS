@@ -216,6 +216,8 @@ public partial class App : Application
             var fanEngine = _serviceProvider.GetService<FanControlEngine>();
             if (fanEngine != null) await fanEngine.ResetAllToSafeDefaultsAsync();
 
+            Nexus.Integrations.OpenRGB.OpenRgbClient.StopOpenRgbServer();
+
             await _serviceProvider.DisposeAsync();
         }
 

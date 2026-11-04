@@ -236,22 +236,37 @@
 
                         // Configure Tempered Glass
                         if (name.includes('Glass') || matName.includes('Glass')) {
-                            child.material = new THREE.MeshPhysicalMaterial({
-                                color: new THREE.Color(0x0a1018),
-                                metalness: 0.1,
-                                roughness: 0.1,
-                                transmission: 0.75,
-                                transparent: true,
-                                opacity: 0.35,
-                                ior: 1.5,
-                                depthWrite: false
-                            });
+                            if (name.includes('Bezel')) {
+                                child.material = new THREE.MeshStandardMaterial({
+                                    color: new THREE.Color(0x06090e),
+                                    roughness: 0.25,
+                                    metalness: 0.1
+                                });
+                            } else {
+                                child.material = new THREE.MeshPhysicalMaterial({
+                                    color: new THREE.Color(0x0a1018),
+                                    metalness: 0.1,
+                                    roughness: 0.08,
+                                    transmission: 0.82,
+                                    transparent: true,
+                                    opacity: 0.35,
+                                    ior: 1.5,
+                                    depthWrite: false
+                                });
+                            }
+                            return;
+                        }
+
+                        // Hide static CAD screen text/gauge elements so dynamic 2D canvas displays cleanly
+                        if (name.includes('Screen_Gauge') || name.includes('Screen_Label') || name.includes('Screen_Value')) {
+                            child.visible = false;
+                            return;
                         }
 
                         // Map RGB Zones and create glowing emissive materials
                         if (name.includes('RGB') || matName.includes('RGB')) {
                             // Check for Corsair AIO Pump LCD Screen vs Halo Ring
-                            if (name.includes('AIO_Pump_Logo') || name.includes('Pump_Logo') || name.includes('Pump_Screen')) {
+                            if (name.includes('Screen_BG') || name.includes('AIO_Pump_Logo') || name.includes('Pump_Logo') || name.includes('Pump_Screen')) {
                                 aioLcdScreenMesh = child;
                                 child.material = new THREE.MeshStandardMaterial({
                                     map: lcdTexture,
@@ -368,14 +383,18 @@
         }
 
         function getDeviceKeyFromMesh(mesh) {
-            const name = mesh.name;
-            const matName = mesh.material ? mesh.material.name : '';
-            if (name.includes('RAM') || matName.includes('RAM')) return 'ram';
-            if (name.includes('GPU') || matName.includes('GPU')) return 'gpu';
-            if (name.includes('AIO') || matName.includes('AIO')) return 'cooler';
-            if (name.includes('Fan') || matName.includes('Fan')) return 'lianli';
-            if (name.includes('MB') || matName.includes('MB')) return 'mb';
-            if (name.includes('Case') || matName.includes('Case')) return 'case';
+            let curr = mesh;
+            while (curr) {
+                const name = curr.name || '';
+                const matName = curr.material ? curr.material.name : '';
+                if (name.includes('RAM') || matName.includes('RAM') || name.includes('Vengeance')) return 'ram';
+                if (name.includes('GPU') || matName.includes('GPU') || name.includes('RTX') || name.includes('MSI')) return 'gpu';
+                if (name.includes('AIO') || matName.includes('AIO') || name.includes('Pump') || name.includes('Capellix')) return 'cooler';
+                if (name.includes('Side_Fan') || name.includes('Bottom_Fan') || name.includes('Rear_Fan') || name.includes('UNI') || name.includes('AL120') || matName.includes('Fan')) return 'lianli';
+                if (name.includes('MB') || matName.includes('MB') || name.includes('Motherboard') || name.includes('AORUS')) return 'mb';
+                if (name.includes('Case') || matName.includes('Case') || name.includes('Chassis') || name.includes('O11')) return 'case';
+                curr = curr.parent;
+            }
             return null;
         }
 

@@ -215,6 +215,28 @@ public class OpenRgbClient : IDisposable
         }
     }
 
+    public static void StopOpenRgbServer(ILogger? logger = null)
+    {
+        try
+        {
+            var existing = System.Diagnostics.Process.GetProcessesByName("OpenRGB");
+            foreach (var p in existing)
+            {
+                try
+                {
+                    p.Kill();
+                    p.WaitForExit(1000);
+                }
+                catch { }
+            }
+            logger?.LogInformation("Stopped OpenRGB background processes.");
+        }
+        catch (Exception ex)
+        {
+            logger?.LogDebug(ex, "Error while stopping OpenRGB process.");
+        }
+    }
+
     private void Disconnect()
     {
         try { _stream?.Dispose(); } catch { }

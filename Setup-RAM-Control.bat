@@ -26,12 +26,11 @@ if not exist "%OPENRGB_EXE%" (
     exit /b 1
 )
 
-:: Register the scheduled task with highest privileges
-set LAUNCHER_BAT=C:\Users\Mabar\AppData\Local\NEXUS\tools\OpenRGB\Start-OpenRGB-Server.bat
-schtasks /Create /TN "NexusOpenRGBServer" /TR "\"%LAUNCHER_BAT%\"" /SC ONLOGON /RL HIGHEST /F
+:: Remove any autostart logon triggers so OpenRGB never starts on PC boot
+schtasks /Delete /TN "NexusOpenRGBServer" /F >nul 2>&1
+schtasks /Delete /TN "NexusOpenRGBRunner" /F >nul 2>&1
 
-echo [3/3] Starting OpenRGB Hardware Server with Elevated Privileges...
-schtasks /Run /TN "NexusOpenRGBServer"
+echo [3/3] OpenRGB configured for on-demand launch by NEXUS app only.
 
 echo.
 echo ======================================================================
