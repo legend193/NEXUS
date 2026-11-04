@@ -295,6 +295,7 @@ public class CorsairVengeanceRgbController : IRgbDevice, IDisposable, IAsyncDisp
             {
                 var stickColors = new RgbColor[ledCount];
                 Array.Fill(stickColors, effectiveColor);
+                await _openRgbClient.SetCustomModeAsync(idx, cancellationToken);
                 await _openRgbClient.UpdateLedsAsync(idx, stickColors, cancellationToken);
             }
         }
@@ -341,6 +342,7 @@ public class CorsairVengeanceRgbController : IRgbDevice, IDisposable, IAsyncDisp
                 var (idx, ledCount) = _dramControllers[zoneIndex];
                 var stickColors = new RgbColor[ledCount];
                 Array.Fill(stickColors, effectiveColor);
+                await _openRgbClient.SetCustomModeAsync(idx, cancellationToken);
                 await _openRgbClient.UpdateLedsAsync(idx, stickColors, cancellationToken);
             }
             else if (_dramControllers.Count == 1)

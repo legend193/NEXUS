@@ -321,8 +321,9 @@
                                             CommandParameter="{Binding HexColor}"
                                             ToolTip="{Binding Name}"
                                             Margin="3" Width="26" Height="26" Cursor="Hand"
-                                            Background="Transparent" BorderThickness="0" Padding="0">
-                                        <Border CornerRadius="13" Background="{Binding Brush}" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1.5">
+                                            Background="Transparent" BorderThickness="0" Padding="0"
+                                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center">
+                                        <Border Width="22" Height="22" CornerRadius="11" Background="{Binding Brush}" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1.5">
                                             <Border.Style>
                                                 <Style TargetType="Border">
                                                     <Style.Triggers>

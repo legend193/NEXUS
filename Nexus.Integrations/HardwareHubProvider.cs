@@ -148,8 +148,10 @@ public class HardwareHubProvider : IDeviceProvider
                 _logger?.LogInformation("Registered Corsair Commander Core Hub into NEXUS RGB Ecosystem.");
             }
 
-            // 3. Logitech G502 HERO Gaming Mouse
-            if (!string.IsNullOrEmpty(logitechMousePath))
+            bool openRgbActive = IsOpenRgbServerRunning();
+
+            // 3. Logitech G502 HERO Gaming Mouse (Bypass raw HID if OpenRGB is actively managing it)
+            if (!string.IsNullOrEmpty(logitechMousePath) && !openRgbActive)
             {
                 var logiController = new LogitechG502Controller(logitechMousePath, _logger);
                 await logiController.InitializeAsync(cancellationToken);
@@ -157,15 +159,23 @@ public class HardwareHubProvider : IDeviceProvider
                 _rgbEngine.RegisterDevice(logiController);
                 _logger?.LogInformation("Registered Logitech G502 HERO into NEXUS RGB Ecosystem.");
             }
+            else if (openRgbActive)
+            {
+                _logger?.LogInformation("OpenRGB active: Delegating Logitech Mouse control to OpenRGB Provider.");
+            }
 
-            // 4. Mechanical Keyboard (Sonix / Gaming Keyboard)
-            if (!string.IsNullOrEmpty(keyboardPath))
+            // 4. Mechanical Keyboard (Sonix / Gaming Keyboard - Bypass raw HID if OpenRGB is active)
+            if (!string.IsNullOrEmpty(keyboardPath) && !openRgbActive)
             {
                 var kbController = new SonixKeyboardController(keyboardPath, _logger);
                 await kbController.InitializeAsync(cancellationToken);
                 devices.Add(kbController);
                 _rgbEngine.RegisterDevice(kbController);
                 _logger?.LogInformation("Registered Gaming Mechanical Keyboard into NEXUS RGB Ecosystem.");
+            }
+            else if (openRgbActive)
+            {
+                _logger?.LogInformation("OpenRGB active: Delegating Mechanical Keyboard control to OpenRGB Provider.");
             }
 
             // 5. NVIDIA GeForce RTX 3080 GPU (MSI Gaming X Trio)
@@ -203,5 +213,22 @@ public class HardwareHubProvider : IDeviceProvider
         }
 
         return devices;
+    }
+
+    private static bool IsOpenRgbServerRunning()
+    {
+        try
+        {
+            using var client = new System.Net.Sockets.TcpClient();
+            var ar = client.BeginConnect("127.0.0.1", 6742, null, null);
+            bool success = ar.AsyncWaitHandle.WaitOne(100);
+            if (success && client.Connected)
+            {
+                client.EndConnect(ar);
+                return true;
+            }
+        }
+        catch { }
+        return System.Diagnostics.Process.GetProcessesByName("OpenRGB").Length > 0;
     }
 }

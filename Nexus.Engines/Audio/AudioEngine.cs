@@ -218,6 +218,31 @@ public class AudioEngine : IAudioEngine, IDisposable
         return RefreshSessionsAsync();
     }
 
+    private static readonly HashSet<string> IgnoredProcessNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "audiodg",
+        "svchost",
+        "searchhost",
+        "searchui",
+        "searchapp",
+        "textinputhost",
+        "systemsettings",
+        "shellexperiencehost",
+        "startmenuexperiencehost",
+        "smartscreen",
+        "wmiprvse",
+        "dllhost",
+        "conhost",
+        "taskhostw",
+        "applicationframehost",
+        "lockapp",
+        "openrgb",
+        "nexus.app",
+        "nexus",
+        "idle",
+        "system"
+    };
+
     public Task RefreshSessionsAsync()
     {
         lock (_lock)
@@ -241,9 +266,14 @@ public class AudioEngine : IAudioEngine, IDisposable
                             if (s.State != AudioSessionState.AudioSessionStateExpired)
                             {
                                 int pid = (int)s.GetProcessID;
-                                if (pid == 0 || seenPids.Add(pid))
+                                if (pid > 4 && seenPids.Add(pid))
                                 {
-                                    _activeSessions.Add(new AudioSessionWrapper(s));
+                                    var wrapper = new AudioSessionWrapper(s);
+                                    if (!string.IsNullOrWhiteSpace(wrapper.ProcessName) &&
+                                        !IgnoredProcessNames.Contains(wrapper.ProcessName))
+                                    {
+                                        _activeSessions.Add(wrapper);
+                                    }
                                 }
                             }
                         }

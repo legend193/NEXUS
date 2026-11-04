@@ -72,9 +72,22 @@ public class AioLcdModeItem
 
 public class RgbColorPresetItem
 {
+    private Brush? _brush;
     public string Name { get; init; } = string.Empty;
     public string HexColor { get; init; } = "#00D2FF";
-    public Brush Brush => new SolidColorBrush((Color)ColorConverter.ConvertFromString(HexColor));
+    public Brush Brush
+    {
+        get
+        {
+            if (_brush == null)
+            {
+                var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString(HexColor));
+                b.Freeze();
+                _brush = b;
+            }
+            return _brush;
+        }
+    }
 }
 
 public class RgbStudioPersistentState

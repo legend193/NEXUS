@@ -71,8 +71,12 @@ public class AudioSessionItem : ViewModelBase
     }
 
     public ICommand ToggleMuteCommand { get; }
+    public ICommand MoveToGameCommand { get; }
+    public ICommand MoveToChatCommand { get; }
+    public ICommand MoveToMediaCommand { get; }
+    public ICommand MoveToAuxCommand { get; }
 
-    public AudioSessionItem(IAudioSession? session, string fallbackName = "System Sounds", string pillColor = "#10B981", string initialChannel = "Game")
+    public AudioSessionItem(IAudioSession? session, string fallbackName = "System Sounds", string pillColor = "#10B981", string initialChannel = "Game", Action<AudioSessionItem, string>? onRouteToChannel = null)
     {
         _session = session;
         DisplayName = session?.DisplayName ?? fallbackName;
@@ -82,6 +86,11 @@ public class AudioSessionItem : ViewModelBase
         _isMuted = session?.IsMuted ?? false;
         _volume = session != null ? session.Volume * 100f : 100f;
         ToggleMuteCommand = new RelayCommand(() => IsMuted = !IsMuted);
+
+        MoveToGameCommand = new RelayCommand(() => onRouteToChannel?.Invoke(this, "Game Channel"));
+        MoveToChatCommand = new RelayCommand(() => onRouteToChannel?.Invoke(this, "Chat Channel"));
+        MoveToMediaCommand = new RelayCommand(() => onRouteToChannel?.Invoke(this, "Media Channel"));
+        MoveToAuxCommand = new RelayCommand(() => onRouteToChannel?.Invoke(this, "Aux Channel"));
 
         // Extract real app icon
         if (session != null)
@@ -643,17 +652,19 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             var ch = channel;
             ch.OnVolumeChanged = vol =>
             {
-                if (ch.BoundEndpoint != null)
+                if (ch.ChannelType == SonarChannelType.Master)
+                {
+                    if (ch.BoundEndpoint != null) ch.BoundEndpoint.MasterVolume = vol / 100f;
+                    else if (_audioEngine.DefaultPlaybackDevice != null) _audioEngine.DefaultPlaybackDevice.MasterVolume = vol / 100f;
+                }
+                else if (ch.ChannelType == SonarChannelType.Mic)
+                {
+                    if (ch.BoundEndpoint != null) ch.BoundEndpoint.MasterVolume = vol / 100f;
+                    else if (_audioEngine.DefaultRecordingDevice != null) _audioEngine.DefaultRecordingDevice.MasterVolume = vol / 100f;
+                }
+                else if (ch.IsVirtualSource && ch.BoundEndpoint != null)
                 {
                     ch.BoundEndpoint.MasterVolume = vol / 100f;
-                }
-                else if (ch.ChannelType == SonarChannelType.Master && _audioEngine.DefaultPlaybackDevice != null)
-                {
-                    _audioEngine.DefaultPlaybackDevice.MasterVolume = vol / 100f;
-                }
-                else if (ch.ChannelType == SonarChannelType.Mic && _audioEngine.DefaultRecordingDevice != null)
-                {
-                    _audioEngine.DefaultRecordingDevice.MasterVolume = vol / 100f;
                 }
 
                 foreach (var app in ch.AssignedApps)
@@ -665,17 +676,19 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
             ch.OnMuteChanged = muted =>
             {
-                if (ch.BoundEndpoint != null)
+                if (ch.ChannelType == SonarChannelType.Master)
+                {
+                    if (ch.BoundEndpoint != null) ch.BoundEndpoint.IsMuted = muted;
+                    else if (_audioEngine.DefaultPlaybackDevice != null) _audioEngine.DefaultPlaybackDevice.IsMuted = muted;
+                }
+                else if (ch.ChannelType == SonarChannelType.Mic)
+                {
+                    if (ch.BoundEndpoint != null) ch.BoundEndpoint.IsMuted = muted;
+                    else if (_audioEngine.DefaultRecordingDevice != null) _audioEngine.DefaultRecordingDevice.IsMuted = muted;
+                }
+                else if (ch.IsVirtualSource && ch.BoundEndpoint != null)
                 {
                     ch.BoundEndpoint.IsMuted = muted;
-                }
-                else if (ch.ChannelType == SonarChannelType.Master && _audioEngine.DefaultPlaybackDevice != null)
-                {
-                    _audioEngine.DefaultPlaybackDevice.IsMuted = muted;
-                }
-                else if (ch.ChannelType == SonarChannelType.Mic && _audioEngine.DefaultRecordingDevice != null)
-                {
-                    _audioEngine.DefaultRecordingDevice.IsMuted = muted;
                 }
 
                 foreach (var app in ch.AssignedApps)
@@ -692,6 +705,15 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
             ch.OnDeviceSelected = choice =>
             {
+                switch (ch.ChannelType)
+                {
+                    case SonarChannelType.Master: _savedMasterDeviceId = choice?.Id; break;
+                    case SonarChannelType.Game: _savedGameDeviceId = choice?.Id; break;
+                    case SonarChannelType.Chat: _savedChatDeviceId = choice?.Id; break;
+                    case SonarChannelType.Media: _savedMediaDeviceId = choice?.Id; break;
+                    case SonarChannelType.Aux: _savedAuxDeviceId = choice?.Id; break;
+                    case SonarChannelType.Mic: _savedMicDeviceId = choice?.Id; break;
+                }
                 SaveState();
             };
         }
@@ -897,67 +919,64 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
             // Sync active sessions across all devices
             var sessions = _audioEngine.ActiveSessions;
-            if (sessions.Count > 0)
+            var gameSessions = new List<AudioSessionItem>();
+            var chatSessions = new List<AudioSessionItem>();
+            var mediaSessions = new List<AudioSessionItem>();
+            var auxSessions = new List<AudioSessionItem>();
+            var routingList = new List<AppRoutingItem>();
+
+            foreach (var s in sessions)
             {
-                var gameSessions = new List<AudioSessionItem>();
-                var chatSessions = new List<AudioSessionItem>();
-                var mediaSessions = new List<AudioSessionItem>();
-                var auxSessions = new List<AudioSessionItem>();
-                var routingList = new List<AppRoutingItem>();
+                string name = s.ProcessName.ToLowerInvariant();
+                string channelTarget = "Game Channel";
+                string pillColor = "#10B981";
 
-                foreach (var s in sessions)
+                if (_processRoutingMap.TryGetValue(s.ProcessName, out var savedTarget))
                 {
-                    string name = s.ProcessName.ToLowerInvariant();
-                    string channelTarget = "Game Channel";
-                    string pillColor = "#10B981";
-
-                    if (_processRoutingMap.TryGetValue(s.ProcessName, out var savedTarget))
-                    {
-                        channelTarget = savedTarget;
-                    }
-                    else if (name.Contains("discord") || name.Contains("teams") || name.Contains("zoom") || name.Contains("skype"))
-                    {
-                        channelTarget = "Chat Channel";
-                    }
-                    else if (name.Contains("spotify") || name.Contains("chrome") || name.Contains("vlc") || name.Contains("msedge") || name.Contains("firefox"))
-                    {
-                        channelTarget = "Media Channel";
-                    }
-                    else if (name.Contains("system") || name.Contains("wallpaper") || name.Contains("steam"))
-                    {
-                        channelTarget = "Aux Channel";
-                    }
-
-                    if (channelTarget.StartsWith("Chat", StringComparison.OrdinalIgnoreCase))
-                    {
-                        pillColor = "#00B4D8";
-                        chatSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Chat"));
-                    }
-                    else if (channelTarget.StartsWith("Media", StringComparison.OrdinalIgnoreCase))
-                    {
-                        pillColor = "#EC4899";
-                        mediaSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Media"));
-                    }
-                    else if (channelTarget.StartsWith("Aux", StringComparison.OrdinalIgnoreCase))
-                    {
-                        pillColor = "#A855F7";
-                        auxSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Aux"));
-                    }
-                    else
-                    {
-                        pillColor = "#10B981";
-                        gameSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Game"));
-                    }
-
-                    routingList.Add(new AppRoutingItem(s, s.DisplayName, channelTarget, "IconAudio", pillColor));
+                    channelTarget = savedTarget;
+                }
+                else if (name.Contains("discord") || name.Contains("teams") || name.Contains("zoom") || name.Contains("skype"))
+                {
+                    channelTarget = "Chat Channel";
+                }
+                else if (name.Contains("spotify") || name.Contains("chrome") || name.Contains("vlc") || name.Contains("msedge") || name.Contains("firefox"))
+                {
+                    channelTarget = "Media Channel";
+                }
+                else if (name.Contains("system") || name.Contains("wallpaper") || name.Contains("steam"))
+                {
+                    channelTarget = "Aux Channel";
                 }
 
-                SyncCollection(Channels[1].AssignedApps, gameSessions);
-                SyncCollection(Channels[2].AssignedApps, chatSessions);
-                SyncCollection(Channels[3].AssignedApps, mediaSessions);
-                SyncCollection(Channels[4].AssignedApps, auxSessions);
-                SyncCollection(AppRoutings, routingList);
+                if (channelTarget.StartsWith("Chat", StringComparison.OrdinalIgnoreCase))
+                {
+                    pillColor = "#00B4D8";
+                    chatSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Chat", (item, target) => AssignSessionToChannel(item, target)));
+                }
+                else if (channelTarget.StartsWith("Media", StringComparison.OrdinalIgnoreCase))
+                {
+                    pillColor = "#EC4899";
+                    mediaSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Media", (item, target) => AssignSessionToChannel(item, target)));
+                }
+                else if (channelTarget.StartsWith("Aux", StringComparison.OrdinalIgnoreCase))
+                {
+                    pillColor = "#A855F7";
+                    auxSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Aux", (item, target) => AssignSessionToChannel(item, target)));
+                }
+                else
+                {
+                    pillColor = "#10B981";
+                    gameSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Game", (item, target) => AssignSessionToChannel(item, target)));
+                }
+
+                routingList.Add(new AppRoutingItem(s, s.DisplayName, channelTarget, "IconAudio", pillColor));
             }
+
+            SyncCollection(Channels[1].AssignedApps, gameSessions);
+            SyncCollection(Channels[2].AssignedApps, chatSessions);
+            SyncCollection(Channels[3].AssignedApps, mediaSessions);
+            SyncCollection(Channels[4].AssignedApps, auxSessions);
+            SyncCollection(AppRoutings, routingList);
         }
         catch { }
     }
@@ -1057,7 +1076,11 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             }
         }
 
-        if (channel.SelectedDevice != null) return;
+        // If no savedId matched, but the channel already has a valid active selection, preserve it!
+        if (channel.SelectedDevice != null && channel.AvailableDevices.Any(d => d.Id == channel.SelectedDevice.Id))
+        {
+            return;
+        }
 
         foreach (var kw in searchKeywords)
         {
@@ -1075,8 +1098,16 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
     public void AssignSessionToChannel(AudioSessionItem session, string targetChannel)
     {
-        session.AssignedChannel = targetChannel;
-        _processRoutingMap[session.ProcessName] = targetChannel;
+        if (session == null || string.IsNullOrWhiteSpace(targetChannel)) return;
+
+        string cleanTarget = targetChannel.Trim();
+        if (!cleanTarget.EndsWith("Channel", StringComparison.OrdinalIgnoreCase))
+        {
+            cleanTarget += " Channel";
+        }
+
+        session.AssignedChannel = cleanTarget;
+        _processRoutingMap[session.ProcessName] = cleanTarget;
         _ = RefreshAsync();
         SaveState();
     }

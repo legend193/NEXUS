@@ -258,6 +258,7 @@
                                         <ComboBox Style="{StaticResource SonarDeviceComboBox}"
                                                   ItemsSource="{Binding AvailableDevices}"
                                                   SelectedItem="{Binding SelectedDevice}"
+                                                  DisplayMemberPath="DisplayName"
                                                   ToolTip="اختر مخرج الصوت المخصص لقناة الماستر" />
                                     </Border>
 
@@ -332,6 +333,7 @@
                                         <ComboBox Style="{StaticResource SonarDeviceComboBox}"
                                                   ItemsSource="{Binding AvailableDevices}"
                                                   SelectedItem="{Binding SelectedDevice}"
+                                                  DisplayMemberPath="DisplayName"
                                                   ToolTip="اختر مخرج الصوت المخصص لقناة الألعاب" />
                                     </Border>
 
@@ -370,8 +372,9 @@
                                         <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
                                     </StackPanel>
 
-                                    <!-- Apps Mini Tray -->
-                                    <Border Grid.Row="6" Background="#11241C" CornerRadius="6" Padding="6,4" MinHeight="26">
+                                    <!-- Apps Mini Tray (Drop Target) -->
+                                    <Border Grid.Row="6" Background="#11241C" CornerRadius="6" Padding="6,4" MinHeight="26"
+                                            AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Game Channel">
                                         <ItemsControl ItemsSource="{Binding AssignedApps}" HorizontalAlignment="Center">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -380,8 +383,12 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Width="18" Height="18" CornerRadius="4" Margin="2,0" Background="#193327" ToolTip="{Binding DisplayName}">
-                                                        <Image Source="{Binding Icon}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    <Border Width="20" Height="20" CornerRadius="4" Margin="2,0" Background="#193327"
+                                                            ToolTip="{Binding DisplayName}" Cursor="Hand"
+                                                            PreviewMouseLeftButtonDown="AppIcon_PreviewMouseLeftButtonDown"
+                                                            MouseMove="AppIcon_MouseMove"
+                                                            MouseRightButtonUp="AppIcon_MouseRightButtonUp">
+                                                        <Image Source="{Binding Icon}" Width="15" Height="15" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -414,6 +421,7 @@
                                         <ComboBox Style="{StaticResource SonarDeviceComboBox}"
                                                   ItemsSource="{Binding AvailableDevices}"
                                                   SelectedItem="{Binding SelectedDevice}"
+                                                  DisplayMemberPath="DisplayName"
                                                   ToolTip="اختر مخرج الصوت المخصص لقناة المحادثة (Discord / Teams)" />
                                     </Border>
 
@@ -452,8 +460,9 @@
                                         <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
                                     </StackPanel>
 
-                                    <!-- Apps Mini Tray -->
-                                    <Border Grid.Row="6" Background="#102530" CornerRadius="6" Padding="6,4" MinHeight="26">
+                                    <!-- Apps Mini Tray (Drop Target) -->
+                                    <Border Grid.Row="6" Background="#102530" CornerRadius="6" Padding="6,4" MinHeight="26"
+                                            AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Chat Channel">
                                         <ItemsControl ItemsSource="{Binding AssignedApps}" HorizontalAlignment="Center">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -462,8 +471,12 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Width="18" Height="18" CornerRadius="4" Margin="2,0" Background="#163545" ToolTip="{Binding DisplayName}">
-                                                        <Image Source="{Binding Icon}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    <Border Width="20" Height="20" CornerRadius="4" Margin="2,0" Background="#163545"
+                                                            ToolTip="{Binding DisplayName}" Cursor="Hand"
+                                                            PreviewMouseLeftButtonDown="AppIcon_PreviewMouseLeftButtonDown"
+                                                            MouseMove="AppIcon_MouseMove"
+                                                            MouseRightButtonUp="AppIcon_MouseRightButtonUp">
+                                                        <Image Source="{Binding Icon}" Width="15" Height="15" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -496,6 +509,7 @@
                                         <ComboBox Style="{StaticResource SonarDeviceComboBox}"
                                                   ItemsSource="{Binding AvailableDevices}"
                                                   SelectedItem="{Binding SelectedDevice}"
+                                                  DisplayMemberPath="DisplayName"
                                                   ToolTip="اختر مخرج الصوت المخصص لقناة الوسائط (Spotify / YouTube)" />
                                     </Border>
 
@@ -534,8 +548,9 @@
                                         <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
                                     </StackPanel>
 
-                                    <!-- Apps Mini Tray -->
-                                    <Border Grid.Row="6" Background="#26121E" CornerRadius="6" Padding="6,4" MinHeight="26">
+                                    <!-- Apps Mini Tray (Drop Target) -->
+                                    <Border Grid.Row="6" Background="#26121E" CornerRadius="6" Padding="6,4" MinHeight="26"
+                                            AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Media Channel">
                                         <ItemsControl ItemsSource="{Binding AssignedApps}" HorizontalAlignment="Center">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -544,8 +559,12 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Width="18" Height="18" CornerRadius="4" Margin="2,0" Background="#3D172E" ToolTip="{Binding DisplayName}">
-                                                        <Image Source="{Binding Icon}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    <Border Width="20" Height="20" CornerRadius="4" Margin="2,0" Background="#3D172E"
+                                                            ToolTip="{Binding DisplayName}" Cursor="Hand"
+                                                            PreviewMouseLeftButtonDown="AppIcon_PreviewMouseLeftButtonDown"
+                                                            MouseMove="AppIcon_MouseMove"
+                                                            MouseRightButtonUp="AppIcon_MouseRightButtonUp">
+                                                        <Image Source="{Binding Icon}" Width="15" Height="15" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -578,6 +597,7 @@
                                         <ComboBox Style="{StaticResource SonarDeviceComboBox}"
                                                   ItemsSource="{Binding AvailableDevices}"
                                                   SelectedItem="{Binding SelectedDevice}"
+                                                  DisplayMemberPath="DisplayName"
                                                   ToolTip="اختر مخرج الصوت المخصص للقناة الإضافية (AUX)" />
                                     </Border>
 
@@ -616,8 +636,9 @@
                                         <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
                                     </StackPanel>
 
-                                    <!-- Apps Mini Tray -->
-                                    <Border Grid.Row="6" Background="#241433" CornerRadius="6" Padding="6,4" MinHeight="26">
+                                    <!-- Apps Mini Tray (Drop Target) -->
+                                    <Border Grid.Row="6" Background="#241433" CornerRadius="6" Padding="6,4" MinHeight="26"
+                                            AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Aux Channel">
                                         <ItemsControl ItemsSource="{Binding AssignedApps}" HorizontalAlignment="Center">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
@@ -626,8 +647,12 @@
                                             </ItemsControl.ItemsPanel>
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Border Width="18" Height="18" CornerRadius="4" Margin="2,0" Background="#361A4E" ToolTip="{Binding DisplayName}">
-                                                        <Image Source="{Binding Icon}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    <Border Width="20" Height="20" CornerRadius="4" Margin="2,0" Background="#361A4E"
+                                                            ToolTip="{Binding DisplayName}" Cursor="Hand"
+                                                            PreviewMouseLeftButtonDown="AppIcon_PreviewMouseLeftButtonDown"
+                                                            MouseMove="AppIcon_MouseMove"
+                                                            MouseRightButtonUp="AppIcon_MouseRightButtonUp">
+                                                        <Image Source="{Binding Icon}" Width="15" Height="15" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                     </Border>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
@@ -660,6 +685,7 @@
                                         <ComboBox Style="{StaticResource SonarDeviceComboBox}"
                                                   ItemsSource="{Binding AvailableDevices}"
                                                   SelectedItem="{Binding SelectedDevice}"
+                                                  DisplayMemberPath="DisplayName"
                                                   ToolTip="اختر جهاز إدخال المايكروفون (Input Device)" />
                                     </Border>
 

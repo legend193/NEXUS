@@ -33,7 +33,7 @@ public class OpenRgbDevice : IRgbDevice
     public IReadOnlyList<RgbZone> Zones => _zones;
     public double Brightness { get; set; } = 1.0;
 
-    public OpenRgbDevice(OpenRgbClient client, int deviceIndex, string name, string vendor, string description, int ledCount)
+    public OpenRgbDevice(OpenRgbClient client, int deviceIndex, string name, string vendor, string description, int ledCount, DeviceType type = DeviceType.LightingController)
     {
         _client = client;
         _deviceIndex = deviceIndex;
@@ -42,9 +42,9 @@ public class OpenRgbDevice : IRgbDevice
         Manufacturer = string.IsNullOrWhiteSpace(vendor) ? "OpenRGB Device" : vendor;
         Model = description;
         SerialNumber = $"ORGB-{deviceIndex}";
-        Type = DeviceType.LightingController;
+        Type = type;
 
-        // Create main zone
+        // Create main zone with exact physical LED count
         var mainZone = new RgbZone($"zone-0", "Main", ledCount);
         _zones.Add(mainZone);
     }
@@ -54,7 +54,7 @@ public class OpenRgbDevice : IRgbDevice
 
     public async Task SetZoneColorsAsync(string zoneId, ReadOnlyMemory<RgbColor> colors, CancellationToken cancellationToken = default)
     {
-        var zone = _zones.FirstOrDefault(z => z.ZoneId == zoneId);
+        var zone = _zones.FirstOrDefault(z => z.ZoneId == zoneId) ?? _zones.FirstOrDefault();
         if (zone != null)
         {
             var span = colors.Span;
@@ -62,18 +62,34 @@ public class OpenRgbDevice : IRgbDevice
             {
                 zone.CurrentColors[i] = span[i];
             }
+            if (span.Length > 0 && span.Length < zone.LedCount)
+            {
+                for (int i = span.Length; i < zone.LedCount; i++)
+                {
+                    zone.CurrentColors[i] = span[0];
+                }
+            }
+            await _client.SetCustomModeAsync(_deviceIndex, cancellationToken);
+            await _client.UpdateLedsAsync(_deviceIndex, zone.CurrentColors, cancellationToken);
         }
-
-        await _client.UpdateLedsAsync(_deviceIndex, colors, cancellationToken);
+        else
+        {
+            await _client.SetCustomModeAsync(_deviceIndex, cancellationToken);
+            await _client.UpdateLedsAsync(_deviceIndex, colors, cancellationToken);
+        }
     }
 
     public Task SetAllColorsAsync(RgbColor color, CancellationToken cancellationToken = default)
     {
+        byte r = (byte)Math.Clamp((int)Math.Round(color.R * Brightness), 0, 255);
+        byte g = (byte)Math.Clamp((int)Math.Round(color.G * Brightness), 0, 255);
+        byte b = (byte)Math.Clamp((int)Math.Round(color.B * Brightness), 0, 255);
+        var effective = new RgbColor(r, g, b);
+
         foreach (var zone in _zones)
         {
-            var colors = new RgbColor[zone.LedCount];
-            Array.Fill(colors, color);
-            return SetZoneColorsAsync(zone.ZoneId, colors, cancellationToken);
+            Array.Fill(zone.CurrentColors, effective);
+            return SetZoneColorsAsync(zone.ZoneId, zone.CurrentColors, cancellationToken);
         }
         return Task.CompletedTask;
     }
@@ -303,21 +319,23 @@ public class OpenRgbClient : IDisposable
                 {
                     // Modes
                     ushort numModes = reader.ReadUInt16();
+                    int activeMode = reader.ReadInt32(); // Protocol v4 includes active_mode
+
                     for (int m = 0; m < numModes; m++)
                     {
-                        ReadLengthPrefixedString(reader);
-                        reader.ReadInt32();
-                        reader.ReadUInt32();
-                        reader.ReadUInt32();
-                        reader.ReadUInt32();
-                        reader.ReadUInt32();
-                        reader.ReadUInt32();
-                        reader.ReadUInt32();
-                        reader.ReadUInt32();
-                        reader.ReadUInt32();
-                        reader.ReadUInt32();
-                        reader.ReadUInt32();
-                        reader.ReadUInt32();
+                        ReadLengthPrefixedString(reader); // mode name
+                        reader.ReadInt32(); // value
+                        reader.ReadUInt32(); // flags
+                        reader.ReadUInt32(); // speed_min
+                        reader.ReadUInt32(); // speed_max
+                        reader.ReadUInt32(); // brightness_min
+                        reader.ReadUInt32(); // brightness_max
+                        reader.ReadUInt32(); // colors_min
+                        reader.ReadUInt32(); // colors_max
+                        reader.ReadUInt32(); // speed
+                        reader.ReadUInt32(); // brightness
+                        reader.ReadUInt32(); // direction
+                        reader.ReadUInt32(); // color_mode
                         ushort numColors = reader.ReadUInt16();
                         if (numColors > 0 && reader.BaseStream.Position + numColors * 4 <= reader.BaseStream.Length)
                         {
@@ -330,22 +348,16 @@ public class OpenRgbClient : IDisposable
                     int zoneLedsSum = 0;
                     for (int z = 0; z < numZones; z++)
                     {
-                        ReadLengthPrefixedString(reader);
-                        reader.ReadInt32();
-                        reader.ReadUInt32();
-                        reader.ReadUInt32();
-                        uint zCount = reader.ReadUInt32();
+                        ReadLengthPrefixedString(reader); // zone name
+                        reader.ReadInt32(); // zone_type
+                        reader.ReadUInt32(); // leds_min
+                        reader.ReadUInt32(); // leds_max
+                        uint zCount = reader.ReadUInt32(); // leds_count
                         zoneLedsSum += (int)zCount;
                         ushort matLen = reader.ReadUInt16();
-                        if (matLen > 0)
+                        if (matLen > 0 && reader.BaseStream.Position + matLen <= reader.BaseStream.Length)
                         {
-                            uint matH = reader.ReadUInt32();
-                            uint matW = reader.ReadUInt32();
-                            int matBytes = (int)(matH * matW * 4);
-                            if (matBytes > 0 && reader.BaseStream.Position + matBytes <= reader.BaseStream.Length)
-                            {
-                                reader.ReadBytes(matBytes);
-                            }
+                            reader.ReadBytes(matLen);
                         }
                     }
 
@@ -367,6 +379,17 @@ public class OpenRgbClient : IDisposable
                     {
                         parsedLeds = 10;
                     }
+                    else if (name.Contains("G502", StringComparison.OrdinalIgnoreCase) ||
+                             name.Contains("HERO", StringComparison.OrdinalIgnoreCase))
+                    {
+                        parsedLeds = 2;
+                    }
+                    else if (name.Contains("EVision", StringComparison.OrdinalIgnoreCase) ||
+                             name.Contains("0C45", StringComparison.OrdinalIgnoreCase) ||
+                             name.Contains("Keyboard", StringComparison.OrdinalIgnoreCase))
+                    {
+                        parsedLeds = 126;
+                    }
                     else
                     {
                         parsedLeds = 32;
@@ -375,8 +398,26 @@ public class OpenRgbClient : IDisposable
 
                 if (parsedLeds <= 0)
                 {
-                    parsedLeds = (name.Contains("Vengeance", StringComparison.OrdinalIgnoreCase) ||
-                                  name.Contains("DRAM", StringComparison.OrdinalIgnoreCase)) ? 10 : 32;
+                    if (name.Contains("Vengeance", StringComparison.OrdinalIgnoreCase) ||
+                        name.Contains("DRAM", StringComparison.OrdinalIgnoreCase))
+                    {
+                        parsedLeds = 10;
+                    }
+                    else if (name.Contains("G502", StringComparison.OrdinalIgnoreCase) ||
+                             name.Contains("HERO", StringComparison.OrdinalIgnoreCase))
+                    {
+                        parsedLeds = 2;
+                    }
+                    else if (name.Contains("EVision", StringComparison.OrdinalIgnoreCase) ||
+                             name.Contains("0C45", StringComparison.OrdinalIgnoreCase) ||
+                             name.Contains("Keyboard", StringComparison.OrdinalIgnoreCase))
+                    {
+                        parsedLeds = 126;
+                    }
+                    else
+                    {
+                        parsedLeds = 32;
+                    }
                 }
 
                 return new OpenRgbControllerInfo(deviceId, name, vendor, description, devType, parsedLeds);
@@ -571,7 +612,7 @@ public class OpenRgbDeviceProvider : IDeviceProvider
                     }
 
                     await _client.SetCustomModeAsync(i, cancellationToken);
-                    var ramDev = new OpenRgbDevice(_client, i, $"RAM: {devName}", devVendor, devDesc, ledCount);
+                    var ramDev = new OpenRgbDevice(_client, i, $"RAM: {devName}", devVendor, devDesc, ledCount, DeviceType.Memory);
                     _rgbEngine.RegisterDevice(ramDev);
                     devices.Add(ramDev);
                     _logger?.LogInformation("OpenRGB Bridge: Registered RAM Controller [{Index}] '{Name}' ({Leds} LEDs)", i, devName, ledCount);
@@ -584,7 +625,7 @@ public class OpenRgbDeviceProvider : IDeviceProvider
                     devName.Contains("HERO", StringComparison.OrdinalIgnoreCase))
                 {
                     await _client.SetCustomModeAsync(i, cancellationToken);
-                    var mouseDev = new OpenRgbDevice(_client, i, $"Mouse: {devName}", devVendor, devDesc, ledCount);
+                    var mouseDev = new OpenRgbDevice(_client, i, $"Mouse: {devName}", devVendor, devDesc, ledCount, DeviceType.Mouse);
                     _rgbEngine.RegisterDevice(mouseDev);
                     devices.Add(mouseDev);
                     _logger?.LogInformation("OpenRGB Bridge: Registered Mouse Controller [{Index}] '{Name}' ({Leds} LEDs)", i, devName, ledCount);
@@ -597,7 +638,7 @@ public class OpenRgbDeviceProvider : IDeviceProvider
                     devName.Contains("EVision", StringComparison.OrdinalIgnoreCase))
                 {
                     await _client.SetCustomModeAsync(i, cancellationToken);
-                    var kbDev = new OpenRgbDevice(_client, i, $"Keyboard: {devName}", devVendor, devDesc, ledCount);
+                    var kbDev = new OpenRgbDevice(_client, i, $"Keyboard: {devName}", devVendor, devDesc, ledCount, DeviceType.Keyboard);
                     _rgbEngine.RegisterDevice(kbDev);
                     devices.Add(kbDev);
                     _logger?.LogInformation("OpenRGB Bridge: Registered Keyboard Controller [{Index}] '{Name}' ({Leds} LEDs)", i, devName, ledCount);
@@ -616,7 +657,7 @@ public class OpenRgbDeviceProvider : IDeviceProvider
                     }
 
                     await _client.SetCustomModeAsync(i, cancellationToken);
-                    var gpuDev = new OpenRgbDevice(_client, i, $"GPU: {devName}", devVendor, devDesc, ledCount);
+                    var gpuDev = new OpenRgbDevice(_client, i, $"GPU: {devName}", devVendor, devDesc, ledCount, DeviceType.Gpu);
                     _rgbEngine.RegisterDevice(gpuDev);
                     devices.Add(gpuDev);
                     _logger?.LogInformation("OpenRGB Bridge: Registered GPU Controller [{Index}] '{Name}'", i, devName);
