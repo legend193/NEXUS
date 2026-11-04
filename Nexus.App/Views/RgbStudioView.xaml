@@ -111,6 +111,7 @@
                             <!-- Rig Visual Frame: Centered & Spacious Interactive Viewport (3D Assembled Rig & 2D Separated Components) -->
                             <Border Background="#0D1018" CornerRadius="12" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1" Height="530" Padding="6">
                                 <Border x:Name="WebViewHostBorder"
+                                        Visibility="{Binding IsLcdCustomizerOpen, Converter={StaticResource InvBoolToVisConverter}}"
                                         CornerRadius="10" Background="#111520" ClipToBounds="True" />
                             </Border>
                         </StackPanel>
@@ -261,6 +262,11 @@
     <Grid Background="#B3060910"
           Visibility="{Binding IsLcdCustomizerOpen, Converter={StaticResource BoolToVisConverter}}"
           Panel.ZIndex="1000">
+        <!-- Backdrop dismiss click area -->
+        <Button Command="{Binding CloseLcdCustomizerCommand}"
+                Background="Transparent" BorderThickness="0"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                Focusable="False" Cursor="Arrow" />
         <Border Width="820" MaxHeight="640"
                 Background="#101522"
                 CornerRadius="16"

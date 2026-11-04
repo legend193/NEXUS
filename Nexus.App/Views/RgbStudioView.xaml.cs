@@ -39,6 +39,7 @@ public partial class RgbStudioView : UserControl
         {
             oldVm.LightingUpdated -= OnLightingUpdated;
             oldVm.AioLcdUpdated -= OnAioLcdUpdated;
+            oldVm.PropertyChanged -= OnVmPropertyChanged;
         }
 
         if (e.NewValue is RgbStudioViewModel newVm)
@@ -46,6 +47,7 @@ public partial class RgbStudioView : UserControl
             _vm = newVm;
             _vm.LightingUpdated += OnLightingUpdated;
             _vm.AioLcdUpdated += OnAioLcdUpdated;
+            _vm.PropertyChanged += OnVmPropertyChanged;
         }
     }
 
@@ -98,6 +100,30 @@ public partial class RgbStudioView : UserControl
                 }
             });
         }
+        else if (e.PropertyName == nameof(RgbStudioViewModel.IsLcdCustomizerOpen))
+        {
+            Dispatcher.Invoke(async () =>
+            {
+                bool isModalOpen = _vm?.IsLcdCustomizerOpen == true;
+                if (_sharedRigWebView != null)
+                {
+                    _sharedRigWebView.Visibility = isModalOpen ? Visibility.Hidden : Visibility.Visible;
+                }
+                if (WebViewHostBorder != null)
+                {
+                    WebViewHostBorder.Visibility = isModalOpen ? Visibility.Collapsed : Visibility.Visible;
+                }
+                if (_sharedRigWebView?.CoreWebView2 != null && _isSharedWebViewInitialized)
+                {
+                    try
+                    {
+                        string display = isModalOpen ? "none" : "block";
+                        await _sharedRigWebView.CoreWebView2.ExecuteScriptAsync($"document.body.style.display = '{display}';");
+                    }
+                    catch { }
+                }
+            });
+        }
     }
 
     private async Task Initialize3DViewportAsync()
@@ -122,6 +148,16 @@ public partial class RgbStudioView : UserControl
 
             // Attach to current view host
             WebViewHostBorder.Child = _sharedRigWebView;
+
+            bool isModalOpen = _vm?.IsLcdCustomizerOpen == true;
+            if (_sharedRigWebView != null)
+            {
+                _sharedRigWebView.Visibility = isModalOpen ? Visibility.Hidden : Visibility.Visible;
+            }
+            if (WebViewHostBorder != null)
+            {
+                WebViewHostBorder.Visibility = isModalOpen ? Visibility.Collapsed : Visibility.Visible;
+            }
 
             if (_isSharedWebViewInitialized)
             {
