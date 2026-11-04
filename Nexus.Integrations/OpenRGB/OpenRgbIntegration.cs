@@ -664,11 +664,26 @@ public class OpenRgbDeviceProvider : IDeviceProvider
                     continue;
                 }
 
-                // 5. Skip devices that are already managed natively to prevent redundant packet collisions
-                bool isNativeLianLi = devName.Contains("Lian Li", StringComparison.OrdinalIgnoreCase) && _rgbEngine.Devices.Any(d => d is LianLiUniFanController);
-                bool isNativeCommander = devName.Contains("Commander", StringComparison.OrdinalIgnoreCase) && _rgbEngine.Devices.Any(d => d is CorsairCommanderCoreController);
+                // 5. Lian Li Uni Hub - AL integration
+                if (devName.Contains("Lian Li", StringComparison.OrdinalIgnoreCase))
+                {
+                    var lianLiCtrl = _rgbEngine.Devices.OfType<LianLiUniFanController>().FirstOrDefault();
+                    if (lianLiCtrl != null)
+                    {
+                        lianLiCtrl.AttachOpenRgbClient(_client, i, ledCount);
+                    }
 
-                if (isNativeLianLi || isNativeCommander)
+                    await _client.SetCustomModeAsync(i, cancellationToken);
+                    var lianLiDev = new OpenRgbDevice(_client, i, $"Fans: {devName}", devVendor, devDesc, ledCount, DeviceType.LightingController);
+                    _rgbEngine.RegisterDevice(lianLiDev);
+                    devices.Add(lianLiDev);
+                    _logger?.LogInformation("OpenRGB Bridge: Registered Lian Li Hub [{Index}] '{Name}' ({Leds} LEDs)", i, devName, ledCount);
+                    continue;
+                }
+
+                // 6. Skip Corsair Commander Core if managed directly via USB HID to prevent packet collision
+                bool isNativeCommander = devName.Contains("Commander", StringComparison.OrdinalIgnoreCase) && _rgbEngine.Devices.Any(d => d is CorsairCommanderCoreController);
+                if (isNativeCommander)
                 {
                     _logger?.LogDebug("OpenRGB Device [{Index}] '{Name}' skipped (driven by native NEXUS USB HID driver)", i, devName);
                     continue;

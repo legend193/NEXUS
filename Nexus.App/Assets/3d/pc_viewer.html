@@ -110,19 +110,25 @@
 
         // Categories mapped to mesh collections
         const deviceMeshMap = {
+            'lianli-side': [],
+            'lianli-bottom': [],
+            'lianli-rear': [],
+            'corsair-fans': [],
+            'corsair-pump': [],
             'ram': [],
             'gpu': [],
-            'cooler': [],
-            'lianli': [],
             'mb': [],
             'case': []
         };
 
         const activeColors = {
+            'lianli-side': new THREE.Color('#00D2FF'),
+            'lianli-bottom': new THREE.Color('#00D2FF'),
+            'lianli-rear': new THREE.Color('#00D2FF'),
+            'corsair-fans': new THREE.Color('#00D2FF'),
+            'corsair-pump': new THREE.Color('#00D2FF'),
             'ram': new THREE.Color('#00D2FF'),
             'gpu': new THREE.Color('#00D2FF'),
-            'cooler': new THREE.Color('#00D2FF'),
-            'lianli': new THREE.Color('#00D2FF'),
             'mb': new THREE.Color('#00D2FF'),
             'case': new THREE.Color('#00D2FF')
         };
@@ -295,17 +301,23 @@
                             });
                             child.material = clonedMat;
 
-                            if (name.includes('RAM') || matName.includes('RAM')) {
+                            if (name.includes('Side_Fan') || matName.includes('Side_Fan')) {
+                                deviceMeshMap['lianli-side'].push(child);
+                            } else if (name.includes('Bottom_Fan') || matName.includes('Bottom_Fan')) {
+                                deviceMeshMap['lianli-bottom'].push(child);
+                            } else if (name.includes('Rear_Fan') || matName.includes('Rear_Fan')) {
+                                deviceMeshMap['lianli-rear'].push(child);
+                            } else if (name.includes('AIO_Fan') || matName.includes('AIO_Fan') || (name.includes('Fan') && name.includes('ML120'))) {
+                                deviceMeshMap['corsair-fans'].push(child);
+                            } else if (name.includes('AIO_Pump_Ring') || name.includes('Pump_Ring')) {
+                                deviceMeshMap['corsair-pump'].push(child);
+                            } else if (name.includes('RAM') || matName.includes('RAM') || name.includes('Vengeance')) {
                                 deviceMeshMap['ram'].push(child);
-                            } else if (name.includes('GPU') || matName.includes('GPU')) {
+                            } else if (name.includes('GPU') || matName.includes('GPU') || name.includes('RTX')) {
                                 deviceMeshMap['gpu'].push(child);
-                            } else if (name.includes('AIO') || matName.includes('AIO')) {
-                                deviceMeshMap['cooler'].push(child);
-                            } else if (name.includes('Fan') || matName.includes('Fan')) {
-                                deviceMeshMap['lianli'].push(child);
-                            } else if (name.includes('MB') || matName.includes('MB')) {
+                            } else if (name.includes('MB') || matName.includes('MB') || name.includes('AORUS')) {
                                 deviceMeshMap['mb'].push(child);
-                            } else if (name.includes('Case') || matName.includes('Case')) {
+                            } else if (name.includes('Case') || matName.includes('Case') || name.includes('Strip')) {
                                 deviceMeshMap['case'].push(child);
                             }
                         }
@@ -387,10 +399,13 @@
             while (curr) {
                 const name = curr.name || '';
                 const matName = curr.material ? curr.material.name : '';
+                if (name.includes('Side_Fan') || matName.includes('Side_Fan')) return 'lianli-side';
+                if (name.includes('Bottom_Fan') || matName.includes('Bottom_Fan')) return 'lianli-bottom';
+                if (name.includes('Rear_Fan') || matName.includes('Rear_Fan')) return 'lianli-rear';
+                if (name.includes('AIO_Fan') || matName.includes('AIO_Fan') || (name.includes('Fan') && name.includes('ML120'))) return 'corsair-fans';
+                if (name.includes('AIO_Pump') || name.includes('Pump') || name.includes('Screen') || matName.includes('Pump')) return 'corsair-pump';
                 if (name.includes('RAM') || matName.includes('RAM') || name.includes('Vengeance')) return 'ram';
                 if (name.includes('GPU') || matName.includes('GPU') || name.includes('RTX') || name.includes('MSI')) return 'gpu';
-                if (name.includes('AIO') || matName.includes('AIO') || name.includes('Pump') || name.includes('Capellix')) return 'cooler';
-                if (name.includes('Side_Fan') || name.includes('Bottom_Fan') || name.includes('Rear_Fan') || name.includes('UNI') || name.includes('AL120') || matName.includes('Fan')) return 'lianli';
                 if (name.includes('MB') || matName.includes('MB') || name.includes('Motherboard') || name.includes('AORUS')) return 'mb';
                 if (name.includes('Case') || matName.includes('Case') || name.includes('Chassis') || name.includes('O11')) return 'case';
                 curr = curr.parent;
@@ -400,13 +415,16 @@
 
         function getFriendlyName(key) {
             switch (key) {
-                case 'ram': return 'Corsair VENGEANCE RGB RT (4x 8GB)';
-                case 'gpu': return 'MSI GeForce RTX 3080 Gaming X Trio';
-                case 'cooler': return 'Corsair H150i Capellix AIO Cooler';
-                case 'lianli': return 'Lian Li UNI FAN AL120 Fans';
-                case 'mb': return 'Gigabyte X570S AORUS PRO AX Motherboard';
-                case 'case': return 'Lian Li O11 Dynamic EVO Case Strip';
-                default: return 'PC Component';
+                case 'lianli-side': return 'مراوح ليان لي الجانبية (3x AL120 Intake)';
+                case 'lianli-bottom': return 'مراوح ليان لي السفلية (3x AL120 Intake)';
+                case 'lianli-rear': return 'مروحة ليان لي الخلفية (1x AL120 Exhaust)';
+                case 'corsair-fans': return 'مراوح رديتر التبريد (3x ML120 Exhaust)';
+                case 'corsair-pump': return 'مضخة وحلقة شاشة المبرد (Capellix LCD Pump)';
+                case 'ram': return 'ذواكر الرام (Corsair VENGEANCE RGB RT 32GB)';
+                case 'gpu': return 'كرت الشاشة (MSI GeForce RTX 3080 Gaming X Trio)';
+                case 'mb': return 'اللوحة الأم (Gigabyte X570S AORUS PRO AX)';
+                case 'case': return 'شريط إضاءة الصندوق (Lian Li O11 EVO Strip)';
+                default: return 'مكون عتادي';
             }
         }
 
@@ -439,12 +457,16 @@
             if (!key) return 'all';
             key = key.toLowerCase();
             if (key === 'all' || key === 'global') return 'all';
+            if (key.includes('side') || key === 'lianli-p1') return 'lianli-side';
+            if (key.includes('bottom') || key === 'lianli-p2') return 'lianli-bottom';
+            if (key.includes('rear') || key === 'lianli-p3') return 'lianli-rear';
+            if (key.includes('corsair-f') || key.includes('aio-fan') || key.includes('corsair-fans') || key.includes('radiator')) return 'corsair-fans';
+            if (key.includes('pump') || key.includes('aio') || key.includes('capellix') || key.includes('screen') || key.includes('lcd')) return 'corsair-pump';
             if (key.includes('ram') || key.includes('memory') || key.includes('vengeance')) return 'ram';
-            if (key.includes('gpu') || key.includes('rtx') || key.includes('msi') || key.includes('display')) return 'gpu';
-            if (key.includes('cooler') || key.includes('pump') || key.includes('aio') || key.includes('capellix') || key.includes('corsair')) return 'cooler';
-            if (key.includes('lianli') || key.includes('fan') || key.includes('al120')) return 'lianli';
+            if (key.includes('gpu') || key.includes('rtx') || key.includes('3080') || key.includes('msi')) return 'gpu';
             if (key.includes('mb') || key.includes('motherboard') || key.includes('aorus') || key.includes('gigabyte')) return 'mb';
-            if (key.includes('case') || key.includes('strip') || key.includes('chassis')) return 'case';
+            if (key.includes('case') || key.includes('strip') || key.includes('o11') || key.includes('chassis')) return 'case';
+            if (key.includes('lianli')) return 'lianli-side';
             return 'all';
         }
 

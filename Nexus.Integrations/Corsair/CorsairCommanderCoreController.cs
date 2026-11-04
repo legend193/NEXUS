@@ -161,14 +161,19 @@ public class CorsairCommanderCoreController : IRgbDevice, IDisposable
         {
             try
             {
-                await Task.Delay(800, token);
-                if (_controllerReady && (DateTime.UtcNow - _lastCommitTime).TotalMilliseconds >= 1000)
+                // Delay 2000ms between watchdog checks to reduce USB traffic
+                await Task.Delay(2000, token);
+
+                // Only send keepalive when no RGB updates have been committed for > 4500ms
+                if (_controllerReady && (DateTime.UtcNow - _lastCommitTime).TotalMilliseconds >= 4500)
                 {
                     lock (_ioLock)
                     {
                         if (_handle != null && !_handle.IsInvalid)
                         {
-                            WriteEndpointData(new byte[] { 0x22, 0x00 }, new byte[] { 0x12, 0x00 }, _lastRgbData);
+                            // Send official lightweight Corsair watchdog keepalive command (0x02, 0x13)
+                            // Avoid sending heavy 276-byte endpoint 0x22 data stream which collides with render loops and causes flashing
+                            SendCommand(new byte[] { 0x02, 0x13 }, null, false);
                             _lastCommitTime = DateTime.UtcNow;
                         }
                     }
@@ -314,11 +319,11 @@ public class CorsairCommanderCoreController : IRgbDevice, IDisposable
                     }
                 }
 
-                // Flush to USB when the last fan zone is reached, or when at least 30ms have elapsed
+                // Flush to USB when the last fan zone is reached and at least 35ms have elapsed since previous commit
                 bool isLastZone = (zoneIndex == _zones.Count - 1);
                 double elapsedSinceCommit = (DateTime.UtcNow - _lastCommitTime).TotalMilliseconds;
 
-                if (isLastZone || elapsedSinceCommit >= 30)
+                if (isLastZone && elapsedSinceCommit >= 35)
                 {
                     WriteEndpointData(new byte[] { 0x22, 0x00 }, new byte[] { 0x12, 0x00 }, _lastRgbData);
                     _lastCommitTime = DateTime.UtcNow;
@@ -341,6 +346,9 @@ public class CorsairCommanderCoreController : IRgbDevice, IDisposable
         {
             lock (_ioLock)
             {
+                double elapsedSinceCommit = (DateTime.UtcNow - _lastCommitTime).TotalMilliseconds;
+                if (elapsedSinceCommit < 35) return Task.CompletedTask; // Throttle to prevent packet collisions and flashing
+
                 byte[] rgbData = new byte[RgbDataLength];
                 byte r = (byte)Math.Round(color.R * Brightness);
                 byte g = (byte)Math.Round(color.G * Brightness);

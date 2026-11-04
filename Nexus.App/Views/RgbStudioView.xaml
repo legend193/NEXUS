@@ -44,6 +44,13 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Dedicated LCD Customizer Button in Header -->
+                        <Button Style="{StaticResource NexusPillButton}" Command="{Binding OpenLcdCustomizerCommand}" Margin="0,0,8,0" Height="32" Padding="12,4" BorderBrush="{StaticResource AccentBrush}">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="8" Height="8" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" Fill="#2000D2FF" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="شاشة المبرد LCD" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" FontSize="11" />
+                            </StackPanel>
+                        </Button>
                         <Button Style="{StaticResource NexusPillButton}" Command="{Binding AutoScanDevicesCommand}" Margin="0,0,8,0">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource IconRefresh}" Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1.5" Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
@@ -79,7 +86,7 @@
                                     <TextBlock Text="PC Rig Canvas — Lian Li O11 EVO" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" />
                                 </StackPanel>
 
-                                <!-- Viewport Toggle: 3D Rig View vs 2D Schematic & LCD Button -->
+                                <!-- Viewport Controls: 3D Rig View vs 2D Schematic & LCD Button -->
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                     <!-- AIO LCD Screen Customizer Button -->
                                     <Button Command="{Binding OpenLcdCustomizerCommand}" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,0,10,0">
@@ -104,123 +111,217 @@
                                 </StackPanel>
                             </Grid>
 
-                            <!-- Rig Visual Frame -->
-                            <Border Background="#0D1018" CornerRadius="12" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1" Height="340" Padding="12">
+                            <!-- Rig Visual Frame: Centered & Spacious 3D PC Tower with 2D Schematic Toggle -->
+                            <Border Background="#0D1018" CornerRadius="12" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1" Height="460" Padding="8">
                                 <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="2.4*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
+                                    <!-- 3D Interactive WebGL Viewport (Three.js Photorealistic CAD Model) -->
+                                    <Border x:Name="WebViewHostBorder"
+                                            Visibility="{Binding Is3dModeActive, Converter={StaticResource BoolToVisConverter}}"
+                                            CornerRadius="10" Background="#111520" ClipToBounds="True" />
 
-                                    <!-- Main Tower Chassis Canvas (3D Viewport + 2D Fallback) -->
-                                    <Border Grid.Column="0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1.5" CornerRadius="10" Background="#111520" Margin="0,0,12,0" Padding="0" ClipToBounds="True">
-                                        <Grid>
-                                            <!-- 3D Interactive WebGL Viewport (Three.js Engine) Hosted Dynamically -->
-                                            <Border x:Name="WebViewHostBorder"
-                                                    Visibility="{Binding Is3dModeActive, Converter={StaticResource BoolToVisConverter}}" />
+                                    <!-- 2D Schematic Canvas Fallback with Separated Component Customization -->
+                                    <Grid Visibility="{Binding Is3dModeActive, Converter={StaticResource InvBoolToVisConverter}}" Margin="10">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
 
-                                            <!-- 2D Schematic Canvas Fallback -->
-                                            <Grid Visibility="{Binding Is3dModeActive, Converter={StaticResource InvBoolToVisConverter}}" Margin="12">
+                                        <!-- Top 3x Radiator Exhaust Fans (Corsair ML120) -->
+                                        <Button Grid.Row="0" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="corsair-fans" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand">
+                                            <Border Background="#161B26" CornerRadius="8" Padding="6" Margin="0,0,0,8" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                                <Grid>
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                        <Ellipse Width="34" Height="34" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" Fill="#1A00D2FF" Margin="4,0" />
+                                                        <Ellipse Width="34" Height="34" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" Fill="#1A00D2FF" Margin="4,0" />
+                                                        <Ellipse Width="34" Height="34" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" Fill="#1A00D2FF" Margin="4,0" />
+                                                    </StackPanel>
+                                                    <TextBlock Text="AIO Top Radiator Fans (3x ML120 Exhaust)" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Right" VerticalAlignment="Top" />
+                                                </Grid>
+                                            </Border>
+                                        </Button>
+
+                                        <!-- Center Chassis Area: Motherboard + Cooler Pump + RAM + Side Fans + Rear Fan + GPU -->
+                                        <Grid Grid.Row="1" Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="100" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="100" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Left: Side Lian Li Intake Fans (3x AL120) -->
+                                            <Button Grid.Column="0" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="lianli-side" Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,8,0" Cursor="Hand">
+                                                <Border Background="#151A27" CornerRadius="8" Padding="6" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock Text="Side Intake" Style="{StaticResource TextMuted}" FontSize="9" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,4" />
+                                                        <Ellipse Width="24" Height="24" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Fill="#1A00D2FF" Margin="0,2" />
+                                                        <Ellipse Width="24" Height="24" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Fill="#1A00D2FF" Margin="0,2" />
+                                                        <Ellipse Width="24" Height="24" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Fill="#1A00D2FF" Margin="0,2" />
+                                                        <TextBlock Text="3x AL120" Style="{StaticResource TextSubtle}" FontSize="8" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </Button>
+
+                                            <!-- Center Column: Pump Cap + RAM + GPU -->
+                                            <Grid Grid.Column="1" Margin="0,0,8,0">
                                                 <Grid.RowDefinitions>
                                                     <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="*" />
                                                     <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="*" />
                                                 </Grid.RowDefinitions>
 
-                                                <!-- Top 3x Fans (Lian Li Radiator) -->
-                                                <Button Grid.Row="0" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="lianli" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand">
-                                                    <Border Background="#161B26" CornerRadius="8" Padding="6" Margin="0,0,0,8" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
-                                                        <Grid>
-                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                                <Ellipse Width="34" Height="34" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" Fill="#1A00D2FF" Margin="4,0" />
-                                                                <Ellipse Width="34" Height="34" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" Fill="#1A00D2FF" Margin="4,0" />
-                                                                <Ellipse Width="34" Height="34" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" Fill="#1A00D2FF" Margin="4,0" />
-                                                            </StackPanel>
-                                                            <TextBlock Text="Lian Li AL120 Top Exhaust" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Right" VerticalAlignment="Top" />
-                                                        </Grid>
-                                                    </Border>
-                                                </Button>
-
-                                                <!-- Center Chassis Area: Motherboard + Cooler + RAM + GPU -->
-                                                <Grid Grid.Row="1" Margin="0,0,0,8">
+                                                <!-- Top Row: AIO Pump Cap / LCD Ring & Motherboard -->
+                                                <Grid Grid.Row="0" Margin="0,0,0,6">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="1.5*" />
+                                                        <ColumnDefinition Width="*" />
                                                         <ColumnDefinition Width="*" />
                                                     </Grid.ColumnDefinitions>
 
-                                                    <!-- Motherboard & Cooler -->
-                                                    <Button Grid.Column="0" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="mb" Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,8,0" Cursor="Hand">
-                                                        <Border Background="#151A27" CornerRadius="8" Padding="8" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
-                                                            <Grid>
-                                                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                                                    <!-- Corsair Pump Circle -->
-                                                                    <Ellipse Width="50" Height="50" Stroke="{StaticResource AccentBrush}" StrokeThickness="3" Fill="#2600D2FF" Margin="0,0,0,6" />
-                                                                    <TextBlock Text="Capellix AIO Pump" FontWeight="Bold" FontSize="10" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
-                                                                    <TextBlock Text="Gigabyte X570S AORUS" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Center" />
-                                                                </StackPanel>
-                                                            </Grid>
+                                                    <!-- Corsair Capellix Pump / LCD Ring -->
+                                                    <Button Grid.Column="0" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="corsair-pump" Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,4,0" Cursor="Hand">
+                                                        <Border Background="#161E2E" CornerRadius="8" Padding="8" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1">
+                                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                <Border Width="40" Height="40" CornerRadius="20" BorderBrush="{StaticResource AccentBrush}" BorderThickness="3" Background="#111827" Margin="0,0,0,4">
+                                                                    <TextBlock Text="LCD" FontWeight="Bold" FontSize="9" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                                </Border>
+                                                                <TextBlock Text="Capellix AIO Pump" FontWeight="Bold" FontSize="10" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                                                <TextBlock Text="24-LED Halo Ring" Style="{StaticResource TextSubtle}" FontSize="8" HorizontalAlignment="Center" />
+                                                            </StackPanel>
                                                         </Border>
                                                     </Button>
 
-                                                    <!-- 4x Corsair RAM Sticks -->
-                                                    <Button Grid.Column="1" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="ram" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand">
-                                                        <Border Background="#151A27" CornerRadius="8" Padding="6" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                                    <!-- Motherboard AORUS Header -->
+                                                    <Button Grid.Column="1" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="mb-aorus" Background="Transparent" BorderThickness="0" Padding="0" Margin="4,0,0,0" Cursor="Hand">
+                                                        <Border Background="#151A27" CornerRadius="8" Padding="8" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
                                                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                                <TextBlock Text="RAM" Style="{StaticResource TextMuted}" FontSize="9" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,4" />
-                                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                                    <Rectangle Width="8" Height="54" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="2,0" />
-                                                                    <Rectangle Width="8" Height="54" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="2,0" />
-                                                                    <Rectangle Width="8" Height="54" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="2,0" />
-                                                                    <Rectangle Width="8" Height="54" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="2,0" />
-                                                                </StackPanel>
-                                                                <TextBlock Text="Corsair RT" Style="{StaticResource TextSubtle}" FontSize="8" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                                                                <Path Data="{StaticResource IconCpuChip}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="24" Height="24" Stretch="Uniform" Margin="0,0,0,6" />
+                                                                <TextBlock Text="AORUS X570S" FontWeight="Bold" FontSize="10" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                                                <TextBlock Text="IO Armor &amp; PCH" Style="{StaticResource TextSubtle}" FontSize="8" HorizontalAlignment="Center" />
                                                             </StackPanel>
                                                         </Border>
                                                     </Button>
                                                 </Grid>
 
-                                                <!-- GPU (MSI RTX 3080 Gaming X Trio) -->
-                                                <Button Grid.Row="2" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="gpu" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand">
+                                                <!-- Middle Row: Corsair Vengeance RAM 4x Modules -->
+                                                <Button Grid.Row="1" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="ram-vengeance" Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,0,6" Cursor="Hand">
+                                                    <Border Background="#151A27" CornerRadius="8" Padding="6" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                                        <Grid>
+                                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                                <Rectangle Width="6" Height="38" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="3,0" />
+                                                                <Rectangle Width="6" Height="38" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="3,0" />
+                                                                <Rectangle Width="6" Height="38" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="3,0" />
+                                                                <Rectangle Width="6" Height="38" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="3,0" />
+                                                            </StackPanel>
+                                                            <TextBlock Text="Corsair VENGEANCE RT (4x DIMM)" Style="{StaticResource TextSubtle}" FontSize="8" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                        </Grid>
+                                                    </Border>
+                                                </Button>
+
+                                                <!-- Bottom Row: GPU (MSI GeForce RTX 3080 Gaming X Trio) -->
+                                                <Button Grid.Row="2" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="gpu-rtx3080" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand">
                                                     <Border Background="#161B26" CornerRadius="8" Padding="8" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
                                                         <Grid>
                                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                                <Path Data="{StaticResource IconGpuCard}" Stroke="{StaticResource SonarOrangeBrush}" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" />
-                                                                <TextBlock Text="MSI GeForce RTX 3080 Gaming X Trio" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                                                                <Path Data="{StaticResource IconGpuCard}" Stroke="{StaticResource SonarOrangeBrush}" StrokeThickness="1.5" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0" />
+                                                                <StackPanel>
+                                                                    <TextBlock Text="MSI GeForce RTX 3080 Gaming X Trio" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                                    <TextBlock Text="PCIe Mystic Light • Top ARGB Lightbar &amp; Side Logo" Style="{StaticResource TextSubtle}" FontSize="8" />
+                                                                </StackPanel>
                                                             </StackPanel>
-                                                            <Border Background="#26FF5500" CornerRadius="6" Padding="6,2" HorizontalAlignment="Right">
-                                                                <TextBlock Text="PCIe Mystic Light" Foreground="{StaticResource SonarOrangeBrush}" FontSize="9" FontWeight="SemiBold" />
-                                                            </Border>
                                                         </Grid>
                                                     </Border>
                                                 </Button>
                                             </Grid>
+
+                                            <!-- Right: Rear Lian Li Exhaust Fan (1x AL120) -->
+                                            <Button Grid.Column="2" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="lianli-rear" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand">
+                                                <Border Background="#151A27" CornerRadius="8" Padding="6" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock Text="Rear Exhaust" Style="{StaticResource TextMuted}" FontSize="9" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,6" />
+                                                        <Ellipse Width="32" Height="32" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" Fill="#1A00D2FF" Margin="0,4" />
+                                                        <TextBlock Text="1x AL120" Style="{StaticResource TextSubtle}" FontSize="8" HorizontalAlignment="Center" Margin="0,6,0,0" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </Button>
                                         </Grid>
-                                    </Border>
 
-                                    <!-- Right Peripherals Tray: Mouse & Keyboard -->
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <!-- Logitech G502 HERO Mouse -->
-                                        <Button Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="mouse" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,0,0,10">
-                                            <Border Background="#151A27" CornerRadius="8" Padding="10" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
-                                                <StackPanel HorizontalAlignment="Center">
-                                                    <Path Data="{StaticResource IconMouseDevice}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="24" Height="24" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center" />
-                                                    <TextBlock Text="Logitech G502" FontWeight="SemiBold" FontSize="10" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
-                                                    <TextBlock Text="1000Hz HID++" Style="{StaticResource TextSubtle}" FontSize="8" HorizontalAlignment="Center" />
-                                                </StackPanel>
-                                            </Border>
-                                        </Button>
+                                        <!-- Bottom 3x Intake Fans (Lian Li AL120) & Chassis Strip -->
+                                        <Grid Grid.Row="2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
 
-                                        <!-- Keyboard -->
-                                        <Button Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="kb" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand">
-                                            <Border Background="#151A27" CornerRadius="8" Padding="10" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
-                                                <StackPanel HorizontalAlignment="Center">
-                                                    <Path Data="{StaticResource IconKeyboardDevice}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="24" Height="24" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center" />
-                                                    <TextBlock Text="RGB Keyboard" FontWeight="SemiBold" FontSize="10" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
-                                                    <TextBlock Text="Per-Key Matrix" Style="{StaticResource TextSubtle}" FontSize="8" HorizontalAlignment="Center" />
-                                                </StackPanel>
-                                            </Border>
-                                        </Button>
+                                            <Button Grid.Column="0" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="lianli-bottom" Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,8,0" Cursor="Hand">
+                                                <Border Background="#161B26" CornerRadius="8" Padding="6" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                                    <Grid>
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                            <Ellipse Width="30" Height="30" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" Fill="#1A00D2FF" Margin="4,0" />
+                                                            <Ellipse Width="30" Height="30" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" Fill="#1A00D2FF" Margin="4,0" />
+                                                            <Ellipse Width="30" Height="30" Stroke="{StaticResource AccentBrush}" StrokeThickness="2" Fill="#1A00D2FF" Margin="4,0" />
+                                                        </StackPanel>
+                                                        <TextBlock Text="Lian Li Bottom Fans (3x AL120 Intake)" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                                    </Grid>
+                                                </Border>
+                                            </Button>
+
+                                            <!-- Lian Li O11 EVO Front Strip -->
+                                            <Button Grid.Column="1" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="case-strip" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand">
+                                                <Border Background="#151A27" CornerRadius="8" Padding="12,6" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Rectangle Width="4" Height="22" RadiusX="2" RadiusY="2" Fill="{StaticResource AccentBrush}" Margin="0,0,6,0" />
+                                                        <TextBlock Text="O11 Front Strip" FontWeight="SemiBold" FontSize="9" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </Button>
+                                        </Grid>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <!-- Dedicated Desktop Peripherals Bar (Logitech Mouse & Mechanical Keyboard) -->
+                            <Border Style="{StaticResource GlassCard}" Margin="0,10,0,0" Padding="12,8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+                                        <Path Data="{StaticResource IconKeyboardDevice}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="ملحقات سطح المكتب" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center" />
                                     </StackPanel>
+
+                                    <!-- Logitech G502 HERO Mouse Card -->
+                                    <Button Grid.Column="1" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="mouse-g502" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,0,8,0">
+                                        <Border Background="#131926" CornerRadius="8" Padding="10,6" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                            <Grid>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Path Data="{StaticResource IconMouseDevice}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock Text="Logitech G502 HERO" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                        <TextBlock Text="Gaming Mouse • 1000Hz HID++" Style="{StaticResource TextSubtle}" FontSize="9" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </Button>
+
+                                    <!-- Mechanical Gaming Keyboard Card -->
+                                    <Button Grid.Column="2" Command="{Binding SelectCanvasDeviceCommand}" CommandParameter="kb-gaming" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand">
+                                        <Border Background="#131926" CornerRadius="8" Padding="10,6" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                            <Grid>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Path Data="{StaticResource IconKeyboardDevice}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="18" Height="18" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock Text="Mechanical Keyboard" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                        <TextBlock Text="Per-Key RGB Matrix • USB HID" Style="{StaticResource TextSubtle}" FontSize="9" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </Button>
                                 </Grid>
                             </Border>
                         </StackPanel>
@@ -366,8 +467,8 @@
     <Grid Background="#B3060910"
           Visibility="{Binding IsLcdCustomizerOpen, Converter={StaticResource BoolToVisConverter}}"
           Panel.ZIndex="1000">
-        <Border Width="760" MaxHeight="600"
-                Background="#111622"
+        <Border Width="820" MaxHeight="640"
+                Background="#101522"
                 CornerRadius="16"
                 BorderBrush="{StaticResource AccentBrush}"
                 BorderThickness="1.5"
@@ -375,7 +476,7 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center">
             <Border.Effect>
-                <DropShadowEffect BlurRadius="30" Color="#00D2FF" Opacity="0.3" ShadowDepth="0" />
+                <DropShadowEffect BlurRadius="35" Color="#00D2FF" Opacity="0.35" ShadowDepth="0" />
             </Border.Effect>
 
             <Grid>
@@ -390,10 +491,10 @@
                     <StackPanel VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Width="10" Height="10" Fill="{StaticResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
-                            <TextBlock Text="مركز تخصيص شاشة المبرد (Corsair iCUE ELITE LCD)"
+                            <TextBlock Text="مركز تخصيص شاشة المبرد المائي • Corsair iCUE ELITE LCD"
                                        FontWeight="Bold" FontSize="16" Foreground="{StaticResource TextPrimaryBrush}" />
                         </StackPanel>
-                        <TextBlock Text="شاشة IPS دائرية 480x480 • حلقة هالة محيطية 24-LED RGB • تحكم عتادي مستقل"
+                        <TextBlock Text="شاشة IPS دائرية 480x480 • حلقة هالة محيطية 24-LED RGB • مزامنة فورية مع درجات الحرارة"
                                    Style="{StaticResource TextSubtle}" FontSize="11" Margin="18,3,0,0" />
                     </StackPanel>
 
@@ -401,8 +502,8 @@
                     <Button Command="{Binding CloseLcdCustomizerCommand}"
                             HorizontalAlignment="Right" VerticalAlignment="Top"
                             Background="Transparent" BorderThickness="0" Padding="8,4" Cursor="Hand">
-                        <Border Background="#1E2638" CornerRadius="8" Padding="10,4" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
-                            <TextBlock Text="✕" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" />
+                        <Border Background="#1E2638" CornerRadius="8" Padding="12,5" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                            <TextBlock Text="إغلاق" FontWeight="Bold" Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" />
                         </Border>
                     </Button>
                 </Grid>
@@ -410,44 +511,71 @@
                 <!-- Body: 2 Columns (Preview on Left, Controls on Right) -->
                 <Grid Grid.Row="1" Margin="0,0,0,16">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="270" />
+                        <ColumnDefinition Width="300" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
                     <!-- Left Column: Circular Screen Live Bezel Preview -->
                     <Border Grid.Column="0" Background="#0A0E17" CornerRadius="12" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1" Padding="16" Margin="0,0,16,0">
                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <!-- Bezel Frame (200x200) -->
-                            <Border Width="200" Height="200" CornerRadius="100"
+                            <!-- Bezel Frame (220x220) with Dynamic Halo Glow -->
+                            <Border Width="220" Height="220" CornerRadius="110"
                                     Background="#060910"
                                     BorderBrush="{Binding LcdHaloRingColorHex}"
-                                    BorderThickness="5">
+                                    BorderThickness="6">
                                 <Border.Effect>
-                                    <DropShadowEffect BlurRadius="20" Color="#00D2FF" Opacity="0.4" ShadowDepth="0" />
+                                    <DropShadowEffect BlurRadius="25" Color="{Binding LcdHaloRingColorHex}" Opacity="0.45" ShadowDepth="0" />
                                 </Border.Effect>
                                 
-                                <!-- Inner Display Screen (160x160) -->
-                                <Border Width="160" Height="160" CornerRadius="80"
+                                <!-- Inner Display Screen (174x174) -->
+                                <Border Width="174" Height="174" CornerRadius="87"
                                         Background="#0C1322"
-                                        BorderBrush="{StaticResource BorderSubtleBrush}"
-                                        BorderThickness="1.5">
+                                        BorderBrush="#1E293B"
+                                        BorderThickness="2">
                                     <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <!-- Circular Gauge Track -->
+                                        <Ellipse Width="150" Height="150" Stroke="#131F33" StrokeThickness="8" />
+                                        <Ellipse Width="150" Height="150" Stroke="{Binding LcdDialAccentColorHex}" StrokeThickness="8" StrokeDashArray="6 2" Opacity="0.85" />
+
                                         <!-- Mode Content Preview -->
                                         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding SelectedLcdModeTitle}" FontWeight="SemiBold" FontSize="9" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" Margin="0,0,0,2" />
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                <TextBlock Text="{Binding LcdPreviewPrimaryText}" FontWeight="Black" FontSize="36" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                <TextBlock Text="{Binding LcdPreviewPrimaryText}" FontWeight="Black" FontSize="38" Foreground="{StaticResource TextPrimaryBrush}" />
                                                 <TextBlock Text="{Binding LcdPreviewUnitText}" FontWeight="Bold" FontSize="16" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Top" Margin="2,4,0,0" />
                                             </StackPanel>
                                             <TextBlock Text="{Binding LcdPreviewSubtitleText}" Style="{StaticResource TextSubtle}" FontSize="8" HorizontalAlignment="Center" Margin="0,2,0,0" />
-                                            <TextBlock Text="ELITE LCD" FontWeight="Bold" FontSize="8" Foreground="#38BDF8" HorizontalAlignment="Center" />
+                                            <TextBlock Text="CORSAIR ELITE LCD" FontWeight="Bold" FontSize="8" Foreground="#38BDF8" HorizontalAlignment="Center" Margin="0,2,0,0" />
                                         </StackPanel>
                                     </Grid>
                                 </Border>
                             </Border>
 
+                            <!-- Live Telemetry Sensors Row -->
+                            <Border Background="#111726" CornerRadius="8" Padding="10,6" Margin="0,14,0,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                        <TextBlock Text="CPU" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding CurrentCpuTemp, StringFormat='{}{0}°C'}" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                        <TextBlock Text="GPU" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding CurrentGpuTemp, StringFormat='{}{0}°C'}" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                        <TextBlock Text="Coolant" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding CurrentCoolantTemp, StringFormat='{}{0}°C'}" FontWeight="Bold" FontSize="11" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
                             <!-- Hardware Status Pill -->
-                            <Border Background="#141C2B" CornerRadius="6" Padding="10,5" Margin="0,16,0,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                            <Border Background="#141C2B" CornerRadius="6" Padding="10,5" Margin="0,8,0,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
                                 <TextBlock Text="{Binding LcdStatusMessage}" Style="{StaticResource TextSubtle}" FontSize="10" TextAlignment="Center" />
                             </Border>
                         </StackPanel>
@@ -457,7 +585,7 @@
                     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="0,0,8,0">
                             <!-- Mode Selector -->
-                            <TextBlock Text="اختر نمط الشاشة (Screen Mode)" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
+                            <TextBlock Text="أنماط عرض الشاشة (Screen Display Modes)" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8" />
                             <ItemsControl ItemsSource="{Binding AvailableLcdModes}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -469,10 +597,10 @@
                                         <Button Command="{Binding DataContext.SelectLcdModeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding Mode}"
                                                 Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,0,8,8">
-                                            <Border Background="#161E2E" CornerRadius="8" Padding="12,8" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                            <Border Background="#161E2E" CornerRadius="8" Padding="12,8" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1" Width="185">
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
-                                                    <TextBlock Text="{Binding Description}" Style="{StaticResource TextSubtle}" FontSize="9" TextTrimming="CharacterEllipsis" MaxWidth="160" />
+                                                    <TextBlock Text="{Binding Description}" Style="{StaticResource TextSubtle}" FontSize="9" TextTrimming="CharacterEllipsis" MaxWidth="175" Margin="0,2,0,0" />
                                                 </StackPanel>
                                             </Border>
                                         </Button>
@@ -480,18 +608,18 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <!-- Custom Image Selector Button -->
+                            <!-- Custom Image / GIF Selector Button -->
                             <Button Command="{Binding BrowseCustomImageCommand}"
                                     Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,4,0,12">
                                 <Border Background="#1C2438" CornerRadius="8" Padding="12,8" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="اختيار صورة أو ملف GIF من الجهاز..." FontWeight="Bold" FontSize="11" Foreground="{StaticResource AccentBrush}" />
+                                        <TextBlock Text="اختيار صورة مخصصة أو ملف GIF من الجهاز..." FontWeight="Bold" FontSize="11" Foreground="{StaticResource AccentBrush}" />
                                     </StackPanel>
                                 </Border>
                             </Button>
 
                             <!-- Halo Ring Presets -->
-                            <TextBlock Text="لون حلقة الهالة (24-LED Halo Ring)" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,6,0,6" />
+                            <TextBlock Text="لون حلقة الهالة المحيطية (24-LED Halo Ring)" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,4,0,6" />
                             <ItemsControl ItemsSource="{Binding LcdColorPresets}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -502,15 +630,18 @@
                                     <DataTemplate>
                                         <Button Command="{Binding DataContext.ApplyHaloRingPresetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding HexColor}"
-                                                Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,0,6,0">
-                                            <Ellipse Width="22" Height="22" Fill="{Binding Brush}" Stroke="{StaticResource BorderSubtleBrush}" StrokeThickness="1" />
+                                                Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,0,8,0">
+                                            <Ellipse Width="24" Height="24" Fill="{Binding Brush}" Stroke="{StaticResource BorderSubtleBrush}" StrokeThickness="1.5" />
                                         </Button>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <!-- Brightness Slider -->
-                            <TextBlock Text="سطوع الشاشة" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,12,0,4" />
+                            <!-- Brightness Slider with Live Percentage -->
+                            <Grid Margin="0,14,0,4">
+                                <TextBlock Text="سطوع الشاشة" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
+                                <TextBlock Text="{Binding LcdBrightness, StringFormat='{}{0:F0}%'}" Style="{StaticResource TextSubtle}" FontSize="11" HorizontalAlignment="Right" />
+                            </Grid>
                             <Slider Minimum="10" Maximum="100" Value="{Binding LcdBrightness, Mode=TwoWay}"
                                     Style="{StaticResource NexusSlider}" Margin="0,0,0,8" />
                         </StackPanel>
@@ -530,7 +661,7 @@
                         <Button Command="{Binding ApplyLcdSettingsCommand}"
                                 Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand">
                             <Border Background="{StaticResource AccentBrush}" CornerRadius="8" Padding="20,8">
-                                <TextBlock Text="تطبيق وحفظ على المبرد" FontWeight="Bold" FontSize="12" Foreground="#0A0E17" />
+                                <TextBlock Text="تطبيق وحفظ على المبرد (Apply to AIO LCD)" FontWeight="Bold" FontSize="12" Foreground="#0A0E17" />
                             </Border>
                         </Button>
                     </StackPanel>

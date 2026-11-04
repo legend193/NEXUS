@@ -483,17 +483,14 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
 
         RefreshDiscoveredHubs();
 
-        // 1. Lian Li Clusters
-        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "lianli-p1", Name = "Lian Li AL Cluster 1", Category = "UNI FAN AL (Daisy-Chained)", DeviceType = "Fan", LedCount = 80, HubName = "Lian Li Hub", IsSelected = true });
-        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "lianli-p2", Name = "Lian Li AL Cluster 2", Category = "UNI FAN AL (Daisy-Chained)", DeviceType = "Fan", LedCount = 80, HubName = "Lian Li Hub" });
-        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "lianli-p3", Name = "Lian Li AL Cluster 3", Category = "UNI FAN AL (Daisy-Chained)", DeviceType = "Fan", LedCount = 80, HubName = "Lian Li Hub" });
-        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "lianli-p4", Name = "Lian Li AL Cluster 4", Category = "UNI FAN AL (Daisy-Chained)", DeviceType = "Fan", LedCount = 80, HubName = "Lian Li Hub" });
+        // 1. Lian Li AL120 Fan Clusters (Separated into Side, Bottom, Rear)
+        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "lianli-side", Name = "Lian Li Side Fans (3x AL120)", Category = "Side Intake Fan Cluster", DeviceType = "Fan", LedCount = 80, HubName = "Lian Li Hub", IsSelected = true });
+        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "lianli-bottom", Name = "Lian Li Bottom Fans (3x AL120)", Category = "Bottom Intake Fan Cluster", DeviceType = "Fan", LedCount = 80, HubName = "Lian Li Hub" });
+        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "lianli-rear", Name = "Lian Li Rear Fan (1x AL120)", Category = "Rear Exhaust Fan", DeviceType = "Fan", LedCount = 80, HubName = "Lian Li Hub" });
 
-        // 2. Corsair Cooler & Fans
-        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "corsair-pump", Name = "Corsair Capellix LCD / Pump", Category = "AIO Pump Shroud Ring", DeviceType = "Aio", LedCount = 16, HubName = "Commander CORE" });
-        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "corsair-f1", Name = "Corsair Fan Port 1", Category = "Radiator / Case Fan", DeviceType = "Fan", LedCount = 34, HubName = "Commander CORE" });
-        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "corsair-f2", Name = "Corsair Fan Port 2", Category = "Radiator / Case Fan", DeviceType = "Fan", LedCount = 34, HubName = "Commander CORE" });
-        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "corsair-f3", Name = "Corsair Fan Port 3", Category = "Radiator / Case Fan", DeviceType = "Fan", LedCount = 34, HubName = "Commander CORE" });
+        // 2. Corsair Cooler & Fans (Separated Radiator Fans and Pump Cap)
+        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "corsair-pump", Name = "Corsair Capellix LCD / Pump", Category = "AIO Pump Shroud Ring", DeviceType = "Aio", LedCount = 24, HubName = "Commander CORE" });
+        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "corsair-fans", Name = "AIO Radiator Fans (3x ML120)", Category = "Top Exhaust Radiator Fans", DeviceType = "Fan", LedCount = 102, HubName = "Commander CORE" });
 
         // 3. Motherboard (Gigabyte X570S AORUS PRO AX)
         CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "mb-aorus", Name = "Gigabyte X570S AORUS PRO AX", Category = "Motherboard RGB (IO, PCH & ARGB)", DeviceType = "Motherboard", LedCount = 80, HubName = "ITE IT8297 USB" });
@@ -504,10 +501,13 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
         // 5. GPU (GeForce RTX 3080)
         CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "gpu-rtx3080", Name = "NVIDIA GeForce RTX 3080", Category = "MSI Gaming X Trio ARGB", DeviceType = "Gpu", LedCount = 26, HubName = "PCIe Bus" });
 
-        // 6. Mouse (Logitech G502 HERO)
+        // 6. Case RGB Strip
+        CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "case-strip", Name = "Lian Li O11 EVO Front Strip", Category = "Chassis Front ARGB Strip", DeviceType = "Case", LedCount = 38, HubName = "Lian Li Chassis" });
+
+        // 7. Mouse (Logitech G502 HERO)
         CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "mouse-g502", Name = "Logitech G502 HERO", Category = "Gaming Mouse (Logo & DPI)", DeviceType = "Mouse", LedCount = 2, HubName = "Logitech HID++" });
 
-        // 7. Keyboard
+        // 8. Keyboard
         CanvasDevices.Add(new iCueDeviceCanvasItem { DeviceId = "kb-gaming", Name = "Mechanical Gaming Keyboard", Category = "Sonix / RGB Keyboard", DeviceType = "Keyboard", LedCount = 104, HubName = "USB HID" });
 
         if (!string.IsNullOrEmpty(_savedSelectedDeviceId))
@@ -820,7 +820,25 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
                 {
                     if (SelectedEffect == RgbEffectType.Static)
                     {
-                        await lianLi.SetAllColorsAsync(pColor);
+                        if (!IsSyncAllDevices && targetKey.Contains("side"))
+                        {
+                            var cBuf = new RgbColor[80]; Array.Fill(cBuf, pColor);
+                            await lianLi.SetZoneColorsAsync("port-1", cBuf);
+                        }
+                        else if (!IsSyncAllDevices && targetKey.Contains("bottom"))
+                        {
+                            var cBuf = new RgbColor[80]; Array.Fill(cBuf, pColor);
+                            await lianLi.SetZoneColorsAsync("port-2", cBuf);
+                        }
+                        else if (!IsSyncAllDevices && targetKey.Contains("rear"))
+                        {
+                            var cBuf = new RgbColor[80]; Array.Fill(cBuf, pColor);
+                            await lianLi.SetZoneColorsAsync("port-3", cBuf);
+                        }
+                        else
+                        {
+                            await lianLi.SetAllColorsAsync(pColor);
+                        }
                     }
                     else
                     {
@@ -829,6 +847,29 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
                         else if (SelectedEffect == RgbEffectType.ColorCycle) effectCode = LianLiUniFanController.ModeColorCycle;
                         await lianLi.SetHardwareEffectAsync(0xFF, effectCode);
                     }
+                }
+                else if (dev is CorsairCommanderCoreController core)
+                {
+                    if (!IsSyncAllDevices && (targetKey.Contains("pump") || targetKey.Contains("aio")))
+                    {
+                        var cBuf = new RgbColor[24]; Array.Fill(cBuf, pColor);
+                        await core.SetZoneColorsAsync("zone-pump", cBuf);
+                    }
+                    else if (!IsSyncAllDevices && targetKey.Contains("fan"))
+                    {
+                        var cBuf = new RgbColor[34]; Array.Fill(cBuf, pColor);
+                        await core.SetZoneColorsAsync("zone-fan-1", cBuf);
+                        await core.SetZoneColorsAsync("zone-fan-2", cBuf);
+                        await core.SetZoneColorsAsync("zone-fan-3", cBuf);
+                    }
+                    else
+                    {
+                        await core.SetAllColorsAsync(pColor);
+                    }
+                }
+                else if (dev is CorsairEliteLcdController lcd && targetKey.Contains("pump"))
+                {
+                    await lcd.SetAllColorsAsync(pColor);
                 }
                 else
                 {
@@ -882,13 +923,13 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
             return dev is GpuRgbController || devId.Contains("gpu") || devId.Contains("3080") || devName.Contains("3080") || devName.Contains("geforce");
         }
 
-        // Lian Li matching
-        if (target.Contains("lianli") || (target.Contains("fan") && canvasItem?.HubName?.Contains("Lian Li") == true))
+        // Lian Li Fans matching (Side, Bottom, Rear)
+        if (target.Contains("lianli") || target.Contains("side") || target.Contains("bottom") || target.Contains("rear") || (target.Contains("fan") && canvasItem?.HubName?.Contains("Lian Li") == true))
         {
-            return dev is LianLiUniFanController || devId.Contains("lianli");
+            return dev is LianLiUniFanController || devId.Contains("lianli") || devName.Contains("lian li");
         }
 
-        // Corsair Commander CORE matching
+        // Corsair Commander CORE matching (Pump / Radiator Fans)
         if (target.Contains("corsair") || target.Contains("pump") || target.Contains("aio") || (canvasItem?.HubName?.Contains("Commander") == true))
         {
             return dev is CorsairCommanderCoreController || dev is CorsairEliteLcdController || devId.Contains("corsair") || devId.Contains("commander");
@@ -898,6 +939,12 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
         if (target.Contains("mb") || target.Contains("aorus") || target.Contains("motherboard"))
         {
             return dev is GigabyteMotherboardRgbController || devId.Contains("mb") || devId.Contains("aorus");
+        }
+
+        // Case Strip matching
+        if (target.Contains("case") || target.Contains("strip") || target.Contains("o11"))
+        {
+            return devId.Contains("case") || devName.Contains("case") || dev is LianLiUniFanController || dev is GigabyteMotherboardRgbController;
         }
 
         return devId.Contains(target) || devName.Contains(target);
