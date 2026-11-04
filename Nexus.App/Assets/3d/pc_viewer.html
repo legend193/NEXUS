@@ -101,9 +101,30 @@
     <script src="GLTFLoader.js"></script>
 
     <script>
+        window.onerror = function(msg, url, line, col, error) {
+            console.error('3D Viewer Error:', msg, url, line, col, error);
+            if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage(JSON.stringify({
+                    type: 'js_error',
+                    message: `${msg} at ${line}:${col}`
+                }));
+            }
+        };
+
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('3D Viewer Unhandled Rejection:', event.reason);
+            if (window.chrome && window.chrome.webview) {
+                window.chrome.webview.postMessage(JSON.stringify({
+                    type: 'js_error',
+                    message: `Unhandled rejection: ${event.reason}`
+                }));
+            }
+        });
+
         let scene, camera, renderer, controls;
         let rigModel = null;
         let isAutoRotate = true;
+        let isCurrent2DMode = false;
         let currentEffect = 'Static';
         let effectSpeed = 1.0;
         let effectTime = 0;
@@ -155,9 +176,6 @@
         let currentLcdHalo = '#00D2FF';
         let customLcdImage = null;
         let customLcdImgPath = '';
-
-        init();
-        animate();
 
         function init() {
             const container = document.getElementById('canvas-container');
@@ -225,8 +243,6 @@
             window.addEventListener('pointermove', onPointerMove);
             window.addEventListener('click', onClick);
         }
-
-        let isCurrent2DMode = false;
 
         function loadRigModel(modelFile, is2D) {
             isCurrent2DMode = is2D;
@@ -935,6 +951,10 @@
             controls.update();
             renderer.render(scene, camera);
         }
+
+        // Initialize and start animation loop after all functions and variables are ready
+        init();
+        animate();
     </script>
 </body>
 </html>

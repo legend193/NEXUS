@@ -130,7 +130,24 @@ public partial class RgbStudioView : UserControl
             }
 
             string assetsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "3d");
-            if (!Directory.Exists(assetsDir)) return;
+            if (!Directory.Exists(assetsDir))
+            {
+                assetsDir = Path.Combine(Directory.GetCurrentDirectory(), "Assets", "3d");
+            }
+            if (!Directory.Exists(assetsDir))
+            {
+                string solutionDir = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
+                string fallback = Path.Combine(solutionDir, "Nexus.App", "Assets", "3d");
+                if (Directory.Exists(fallback)) assetsDir = fallback;
+            }
+
+            if (!Directory.Exists(assetsDir))
+            {
+                Serilog.Log.Error("3D Viewport assets directory not found! Checked: {Path}", assetsDir);
+                return;
+            }
+
+            Serilog.Log.Information("Initializing 3D Viewport using assets from: {Path}", assetsDir);
 
             // Reuse prewarmed environment from App startup if ready, or initialize now
             CoreWebView2Environment env;
@@ -147,7 +164,7 @@ public partial class RgbStudioView : UserControl
             await _sharedRigWebView.EnsureCoreWebView2Async(env);
 
             _sharedRigWebView.CoreWebView2.Settings.IsStatusBarEnabled = false;
-            _sharedRigWebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+            _sharedRigWebView.CoreWebView2.Settings.AreDevToolsEnabled = true;
             _sharedRigWebView.CoreWebView2.Settings.IsZoomControlEnabled = false;
 
             // Map local directory to virtual host name to enable glTF binary fetch without CORS blocks
@@ -159,15 +176,23 @@ public partial class RgbStudioView : UserControl
             _sharedRigWebView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
             _sharedRigWebView.CoreWebView2.NavigationCompleted += (s, args) =>
             {
-                _isSharedWebViewInitialized = true;
-                PushCurrentLighting();
+                if (!args.IsSuccess)
+                {
+                    Serilog.Log.Error("WebView2 3D Viewport navigation failed: {Status} (HTTP {Http})", args.WebErrorStatus, args.HttpStatusCode);
+                }
+                else
+                {
+                    Serilog.Log.Information("WebView2 3D Viewport navigation succeeded.");
+                    _isSharedWebViewInitialized = true;
+                    PushCurrentLighting();
+                }
             };
 
             _sharedRigWebView.CoreWebView2.Navigate("https://nexus3d.local/pc_viewer.html");
         }
-        catch
+        catch (Exception ex)
         {
-            // Fallback gracefully to 2D view if WebView2 runtime is missing
+            Serilog.Log.Error(ex, "Failed to initialize 3D Viewport in RGB Studio.");
             if (_vm != null)
             {
                 _vm.Is3dModeActive = false;
@@ -230,6 +255,10 @@ public partial class RgbStudioView : UserControl
                     {
                         PushCurrentLighting();
                     });
+                }
+                else if (msgType == "js_error" && doc.RootElement.TryGetProperty("message", out var errProp))
+                {
+                    Serilog.Log.Error("3D Viewport JavaScript Error: {Message}", errProp.GetString());
                 }
             }
         }

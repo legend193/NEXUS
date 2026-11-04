@@ -140,6 +140,7 @@ public partial class App : Application
         services.AddSingleton<Window>(sp => sp.GetRequiredService<MainWindow>());
         services.AddSingleton<NexusTrayService>();
         services.AddSingleton<Views.MiniHudWindow>();
+        services.AddTransient<Views.SonarPopoutWindow>();
 
         _serviceProvider = services.BuildServiceProvider();
 

@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <None Update="Assets\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <Resource Include="Assets\nexus_logo.ico" />
     <Resource Include="Assets\nexus_logo.png" />

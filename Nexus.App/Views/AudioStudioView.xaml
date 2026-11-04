@@ -122,6 +122,12 @@
 
                     <!-- Quick Global Action Buttons -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource NexusPillButton}" Command="{Binding PopoutMixerCommand}" Margin="0,0,6,0" Padding="8,4" ToolTip="فتح الميكسر في نافذة منبثقة مستقلة">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource IconPopout}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                <TextBlock Text="نافذة منبثقة (Pop-out)" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource AccentBrush}" />
+                            </StackPanel>
+                        </Button>
                         <Button Style="{StaticResource NexusPillButton}" Command="{Binding MuteAllChannelsCommand}" Margin="0,0,6,0" Padding="8,4" Content="كتم الكل" FontSize="11" />
                         <Button Style="{StaticResource NexusPillButton}" Command="{Binding ResetAllVolumesCommand}" Margin="0,0,6,0" Padding="8,4" Content="إعادة ضبط" FontSize="11" />
                         <Button Style="{StaticResource NexusAccentButton}" Command="{Binding RefreshSessionsCommand}" Height="28" Padding="10,3">
@@ -216,6 +222,12 @@
                                 <TextBlock Text="قنوات الصوت الاحترافية (Independent Audio Sources &amp; Faders)" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding PopoutMixerCommand}" Margin="0,0,10,0" Padding="8,3" ToolTip="فصل الميكسر في نافذة عائمة">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconPopout}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="10" Height="10" Stretch="Uniform" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="نافذة منبثقة" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
                                 <Border Background="#10B981" Width="6" Height="6" CornerRadius="3" Margin="0,0,6,0" VerticalAlignment="Center" />
                                 <TextBlock Text="SteelSeries Sonar Matrix Engine Active" Style="{StaticResource TextSubtle}" FontSize="11" VerticalAlignment="Center" />
                             </StackPanel>
