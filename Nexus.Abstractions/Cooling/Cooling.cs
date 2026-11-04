@@ -1,5 +1,28 @@
 namespace Nexus.Abstractions.Cooling;
 
+public enum SensorSourceType
+{
+    Cpu,
+    Gpu,
+    Coolant,
+    MaxCpuGpu
+}
+
+public enum PumpSpeedMode
+{
+    Quiet,     // ~2200 RPM
+    Balanced,  // ~2650 RPM
+    Extreme,   // ~2850 RPM
+    Custom
+}
+
+public enum SmoothingSpeed
+{
+    Direct,    // Instantaneous response
+    Balanced,  // 1.5s smoothing (Standard)
+    Smooth     // 3.0s progressive hysteresis (Silent priority, eliminates fan surging)
+}
+
 public class FanCurvePoint : IComparable<FanCurvePoint>
 {
     public double TemperatureCelsius { get; set; }
@@ -20,10 +43,16 @@ public class FanCurve
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Name { get; set; } = "Custom Curve";
-    public string TargetSensorId { get; set; } = "CPU"; // "CPU", "GPU", etc.
+    public string TargetSensorId { get; set; } = "CPU"; // "CPU", "GPU", "Coolant", "Max"
+    public SensorSourceType SensorSource { get; set; } = SensorSourceType.Cpu;
     public double MinFanSpeedPercent { get; set; } = 25.0; // Safety floor
     public double MaxFanSpeedPercent { get; set; } = 100.0;
     public double EmergencyTempCelsius { get; set; } = 85.0; // Force 100% fan speed
+    public bool IsZeroRpmEnabled { get; set; } = false;
+    public double ZeroRpmThresholdCelsius { get; set; } = 45.0;
+    public SmoothingSpeed Smoothing { get; set; } = SmoothingSpeed.Smooth;
+    public double HysteresisSeconds { get; set; } = 2.5;
+
     public List<FanCurvePoint> Points { get; set; } = new()
     {
         new(30, 25),
@@ -39,6 +68,12 @@ public class FanCurve
         if (temperatureCelsius >= EmergencyTempCelsius)
         {
             return 100.0;
+        }
+
+        // Zero RPM support
+        if (IsZeroRpmEnabled && temperatureCelsius <= ZeroRpmThresholdCelsius)
+        {
+            return 0.0;
         }
 
         if (Points.Count == 0)

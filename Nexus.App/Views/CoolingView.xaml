@@ -11,6 +11,7 @@
 
     <UserControl.Resources>
         <conv:IconKeyToGeometryConverter x:Key="IconKeyToGeometryConverter" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter" />
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,16,0">
@@ -28,7 +29,7 @@
                         <Border Background="{StaticResource AccentGlowBrush}" CornerRadius="10" Padding="10,6" Margin="0,0,12,0" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1">
                             <StackPanel Orientation="Horizontal">
                                 <Ellipse Width="8" Height="8" Fill="{StaticResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
-                                <TextBlock Text="COOLING &amp; FANS" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                                <TextBlock Text="COOLING STUDIO" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Border>
 
@@ -41,59 +42,126 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Style="{StaticResource NexusPillButton}" Command="{Binding ResetSafetyDefaultsCommand}" Margin="0,0,8,0" Content="Safety Defaults" />
+                        <Button Style="{StaticResource NexusPillButton}" Command="{Binding ResetSafetyDefaultsCommand}" Margin="0,0,8,0">
+                            <TextBlock Text="إعدادات الأمان المتوازنة" VerticalAlignment="Center" FontSize="11" />
+                        </Button>
                         <Button Style="{StaticResource NexusAccentButton}" Command="{Binding ApplyFanCurveCommand}" Height="32" Padding="14,4">
                             <StackPanel Orientation="Horizontal">
                                 <Path Data="{StaticResource IconCheck}" Stroke="#FFFFFF" StrokeThickness="1.5" Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                <TextBlock Text="Apply Curve" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11" />
+                                <TextBlock Text="تطبيق وحفظ التبريد" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <!-- Main Layout: Fan Curve Editor (Left 65%) & Fan Cluster + Presets (Right 35%) -->
+            <!-- Main Layout: Fan Curve Editor (Left 62%) & Pumps, Telemetry, Presets (Right 38%) -->
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.7*" />
+                    <ColumnDefinition Width="1.6*" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!-- Left Column: Spline Fan Curve Editor -->
-                <Border Grid.Column="0" Style="{StaticResource GlassCard}" Margin="0,0,8,0" Padding="18">
-                    <StackPanel>
-                        <Grid Margin="0,0,0,12">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Path Data="{StaticResource IconCooling}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" />
-                                <TextBlock Text="Fan curve editor" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" />
-                            </StackPanel>
-                            <TextBlock Text="Cubic Spline Interpolation" Style="{StaticResource TextSubtle}" HorizontalAlignment="Right" FontSize="11" />
-                        </Grid>
+                <!-- Left Column: Interactive Spline Fan Curve Editor & Per-Channel Routing -->
+                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                    
+                    <!-- Curve Editor Card -->
+                    <Border Style="{StaticResource GlassCard}" Margin="0,0,0,14" Padding="18">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconCooling}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" />
+                                    <TextBlock Text="منحنى التبريد التفاعلي (Interactive Fan Curve)" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </StackPanel>
+                                <TextBlock Text="اسحب النقاط بالماوس للتعديل المباشر" Style="{StaticResource TextSubtle}" HorizontalAlignment="Right" FontSize="10" VerticalAlignment="Center" />
+                            </Grid>
 
-                        <!-- Fan Curve Canvas Interactive Surface -->
-                        <Border Background="#0D1018" CornerRadius="12" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1" Height="260" Margin="0,0,0,16" Padding="6">
-                            <ctrl:FanCurveCanvas Points="{Binding EditableCurvePoints}"
-                                                 CurrentTemperature="{Binding SimulatedTemperature}"
-                                                 CalculatedSpeed="{Binding SimulatedCalculatedSpeed}" />
-                        </Border>
+                            <!-- Channel Quick Selection Strip -->
+                            <TextBlock Text="مسار التبريد المحدد حاليا (Active Fan Channel):" Style="{StaticResource TextMuted}" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <ItemsControl ItemsSource="{Binding FanChannels}" Margin="0,0,0,14">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Command="{Binding DataContext.SelectChannelCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,0,6,6">
+                                            <Border CornerRadius="8" Padding="10,6" BorderThickness="1.2">
+                                                <Border.Style>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="Background" Value="#121824" />
+                                                        <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                <Setter Property="Background" Value="#1B263B" />
+                                                                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Border.Style>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Ellipse Width="7" Height="7" Fill="{StaticResource AccentBrush}" Margin="0,0,6,0" VerticalAlignment="Center"
+                                                             Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisConverter}}" />
+                                                    <TextBlock Text="{Binding ArabicTitle}" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                                                    <TextBlock Text=" • " Style="{StaticResource TextSubtle}" FontSize="10" VerticalAlignment="Center" />
+                                                    <TextBlock Text="{Binding Rpm, StringFormat={}{0:N0} RPM}" FontWeight="SemiBold" FontSize="10" Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </Border>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
-                        <!-- Temperature Source & Manual Override Sub-Row -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
+                            <!-- Fan Curve Canvas Interactive Surface with Drag-and-Drop Support -->
+                            <Border Background="#0D1018" CornerRadius="12" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1" Height="260" Margin="0,0,0,14" Padding="6">
+                                <ctrl:FanCurveCanvas Points="{Binding EditableCurvePoints}"
+                                                     CurrentTemperature="{Binding SimulatedTemperature}"
+                                                     CalculatedSpeed="{Binding SimulatedCalculatedSpeed}" />
+                            </Border>
 
-                            <!-- Sensor Source Pills -->
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="Source:" Style="{StaticResource TextMuted}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                <Button Content="CPU" Command="{Binding SelectSourceCommand}" CommandParameter="CPU" Style="{StaticResource NexusAccentButton}" Height="30" Padding="12,0" Margin="0,0,6,0" FontSize="11" />
-                                <Button Content="GPU" Command="{Binding SelectSourceCommand}" CommandParameter="GPU" Style="{StaticResource NexusPillButton}" Height="30" Padding="12,0" Margin="0,0,6,0" FontSize="11" />
-                                <Button Content="VRM" Command="{Binding SelectSourceCommand}" CommandParameter="VRM" Style="{StaticResource NexusPillButton}" Height="30" Padding="12,0" FontSize="11" />
-                            </StackPanel>
+                            <!-- Sensor Source & Hysteresis Smoothing Row -->
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
 
-                            <!-- Manual Override Slider -->
-                            <Border Grid.Column="1" Background="{StaticResource CardBgBrush}" CornerRadius="10" Padding="12,6" Margin="16,0,0,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                <!-- Left: Sensor Source Selection -->
+                                <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                    <TextBlock Text="مصدر حرارة القناة (Sensor Source):" Style="{StaticResource TextMuted}" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="CPU" Command="{Binding SelectSourceCommand}" CommandParameter="Cpu" Style="{StaticResource NexusPillButton}" Height="30" Padding="12,0" Margin="0,0,6,0" FontSize="11" />
+                                        <Button Content="GPU" Command="{Binding SelectSourceCommand}" CommandParameter="Gpu" Style="{StaticResource NexusPillButton}" Height="30" Padding="12,0" Margin="0,0,6,0" FontSize="11" />
+                                        <Button Content="Liquid" Command="{Binding SelectSourceCommand}" CommandParameter="Coolant" Style="{StaticResource NexusPillButton}" Height="30" Padding="12,0" Margin="0,0,6,0" FontSize="11" />
+                                        <Button Content="Max" Command="{Binding SelectSourceCommand}" CommandParameter="MaxCpuGpu" Style="{StaticResource NexusPillButton}" Height="30" Padding="12,0" FontSize="11" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Right: Thermal Smoothing & Hysteresis -->
+                                <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                    <TextBlock Text="التنعيم الحراري لمنع قفزات المراوح (Smoothing):" Style="{StaticResource TextMuted}" FontSize="11" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Command="{Binding SetSmoothingCommand}" CommandParameter="Smooth" Style="{StaticResource NexusPillButton}" Height="30" Padding="10,0" Margin="0,0,6,0">
+                                            <Border CornerRadius="6">
+                                                <TextBlock Text="هادئ وسلس (3s)" FontSize="10" FontWeight="SemiBold"
+                                                           Foreground="{Binding IsSmoothingSmooth, Converter={x:Null}}" />
+                                            </Border>
+                                        </Button>
+                                        <Button Command="{Binding SetSmoothingCommand}" CommandParameter="Balanced" Style="{StaticResource NexusPillButton}" Height="30" Padding="10,0" Margin="0,0,6,0">
+                                            <TextBlock Text="متوازن (1.5s)" FontSize="10" FontWeight="SemiBold" />
+                                        </Button>
+                                        <Button Command="{Binding SetSmoothingCommand}" CommandParameter="Direct" Style="{StaticResource NexusPillButton}" Height="30" Padding="10,0">
+                                            <TextBlock Text="مباشر" FontSize="10" FontWeight="SemiBold" />
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Manual Override Control Slider -->
+                            <Border Background="{StaticResource CardBgBrush}" CornerRadius="10" Padding="12,8" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
@@ -101,75 +169,160 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Manual:" Style="{StaticResource TextSubtle}" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                    <Slider Grid.Column="1" Value="{Binding ManualSpeed}" Minimum="20" Maximum="100" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                    <TextBlock Grid.Column="2" Text="{Binding ManualSpeed, StringFormat={}{0:0}%}" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                    <CheckBox Grid.Column="3" IsChecked="{Binding IsManualOverrideActive}" Style="{StaticResource NexusToggleSwitch}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="0" Text="التحكم اليدوي المباشر:" Style="{StaticResource TextSubtle}" FontSize="11" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                    <Slider Grid.Column="1" Value="{Binding ManualSpeed, Mode=TwoWay}" Minimum="20" Maximum="100" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                    <TextBlock Grid.Column="2" Text="{Binding ManualSpeed, StringFormat={}{0:0}%}" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                    <CheckBox Grid.Column="3" IsChecked="{Binding IsManualOverrideActive, Mode=TwoWay}" Style="{StaticResource NexusToggleSwitch}" VerticalAlignment="Center" ToolTip="تفعيل/تعطيل التثبيت اليدوي للسرعة" />
                                 </Grid>
                             </Border>
-                        </Grid>
-                    </StackPanel>
-                </Border>
 
-                <!-- Right Column: Fan Cluster Visual & Presets -->
-                <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Right Column: Dedicated Pump Control, Telemetry, and Presets -->
+                <StackPanel Grid.Column="1">
                     
-                    <!-- Fan Cluster Visual Card -->
-                    <Border Style="{StaticResource GlassCard}" Margin="0,0,0,14" Padding="18">
+                    <!-- Dedicated AIO Pump Card -->
+                    <Border Style="{StaticResource GlassCard}" Margin="0,0,0,14" Padding="16">
                         <StackPanel>
-                            <Grid Margin="0,0,0,14">
+                            <Grid Margin="0,0,0,12">
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Path Data="{StaticResource IconFanBlade}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" />
-                                    <TextBlock Text="Fan Cluster" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" />
+                                    <Path Data="{StaticResource IconAioPump}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,8,0" />
+                                    <TextBlock Text="مضخة التبريد • Capellix AIO Pump" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
                                 </StackPanel>
-                                <TextBlock Text="3x Lian Li AL120" Style="{StaticResource TextSubtle}" HorizontalAlignment="Right" FontSize="11" />
+                                <Border Background="#162032" CornerRadius="6" Padding="8,3" HorizontalAlignment="Right">
+                                    <TextBlock Text="{Binding FanPumpRpm, StringFormat={}{0:N0} RPM}" FontWeight="Bold" FontSize="11" Foreground="{StaticResource AccentBrush}" />
+                                </Border>
                             </Grid>
 
-                            <!-- 3 Graphical Fan Hub Circles -->
-                            <Border Background="#0D1018" CornerRadius="12" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1" Padding="16" Margin="0,0,0,12">
-                                <UniformGrid Columns="3">
-                                    <!-- Fan 1 -->
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Grid Width="56" Height="56" Margin="0,0,0,6">
-                                            <Ellipse Stroke="{StaticResource AccentBrush}" StrokeThickness="2" Fill="#1400D2FF" />
-                                            <Path Data="{StaticResource IconFanBlade}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Grid>
-                                        <TextBlock Text="{Binding Fan1Rpm, StringFormat={}{0:N0} RPM}" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
-                                        <TextBlock Text="Top Exhaust" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Center" />
-                                    </StackPanel>
+                            <!-- 3 Discrete Pump Speed Modes -->
+                            <UniformGrid Columns="3" Margin="0,0,0,8">
+                                <!-- Quiet -->
+                                <Button Command="{Binding SetPumpModeCommand}" CommandParameter="Quiet"
+                                        Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="0,0,4,0">
+                                    <Border CornerRadius="8" Padding="6,8" BorderThickness="1.2">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#121824" />
+                                                <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPumpQuiet}" Value="True">
+                                                        <Setter Property="Background" Value="#1C273C" />
+                                                        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="هادئ" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                            <TextBlock Text="~2200 RPM" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                    </Border>
+                                </Button>
 
-                                    <!-- Fan 2 -->
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Grid Width="56" Height="56" Margin="0,0,0,6">
-                                            <Ellipse Stroke="{StaticResource AccentBrush}" StrokeThickness="2" Fill="#1400D2FF" />
-                                            <Path Data="{StaticResource IconFanBlade}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Grid>
-                                        <TextBlock Text="{Binding Fan2Rpm, StringFormat={}{0:N0} RPM}" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
-                                        <TextBlock Text="Side Intake" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Center" />
-                                    </StackPanel>
+                                <!-- Balanced -->
+                                <Button Command="{Binding SetPumpModeCommand}" CommandParameter="Balanced"
+                                        Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="2,0,2,0">
+                                    <Border CornerRadius="8" Padding="6,8" BorderThickness="1.2">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#121824" />
+                                                <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPumpBalanced}" Value="True">
+                                                        <Setter Property="Background" Value="#1C273C" />
+                                                        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="متوازن" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                            <TextBlock Text="~2650 RPM" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                    </Border>
+                                </Button>
 
-                                    <!-- Fan 3 -->
-                                    <StackPanel HorizontalAlignment="Center">
-                                        <Grid Width="56" Height="56" Margin="0,0,0,6">
-                                            <Ellipse Stroke="{StaticResource SonarOrangeBrush}" StrokeThickness="2" Fill="#14FF5500" />
-                                            <Path Data="{StaticResource IconAioPump}" Stroke="{StaticResource SonarOrangeBrush}" StrokeThickness="1.5" Width="24" Height="24" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Grid>
-                                        <TextBlock Text="{Binding FanPumpRpm, StringFormat={}{0:N0} RPM}" FontWeight="Bold" FontSize="11" Foreground="{StaticResource SonarOrangeBrush}" HorizontalAlignment="Center" />
-                                        <TextBlock Text="AIO Pump" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Center" />
+                                <!-- Extreme -->
+                                <Button Command="{Binding SetPumpModeCommand}" CommandParameter="Extreme"
+                                        Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" Margin="4,0,0,0">
+                                    <Border CornerRadius="8" Padding="6,8" BorderThickness="1.2">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#121824" />
+                                                <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPumpExtreme}" Value="True">
+                                                        <Setter Property="Background" Value="#1C273C" />
+                                                        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel HorizontalAlignment="Center">
+                                            <TextBlock Text="أداء أقصى" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                            <TextBlock Text="~2850 RPM" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                    </Border>
+                                </Button>
+                            </UniformGrid>
+                            <TextBlock Text="تبقى سرعة المضخة ثابتة لحماية تدفق السائل وعمر المحرك" Style="{StaticResource TextSubtle}" FontSize="9" TextAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Real-Time Telemetry & Channel Status Card -->
+                    <Border Style="{StaticResource GlassCard}" Margin="0,0,0,14" Padding="16">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconHardware}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="15" Height="15" Stretch="Uniform" Margin="0,0,8,0" />
+                                    <TextBlock Text="حساسات الحرارة وسرعة الدوران الحية" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- 3 Temperature Sensor Badges -->
+                            <Border Background="#0D1018" CornerRadius="10" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1" Padding="12,8" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                        <TextBlock Text="CPU Temp" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding LiveCpuTemp, StringFormat={}{0}°C}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
                                     </StackPanel>
-                                </UniformGrid>
+                                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                        <TextBlock Text="GPU Temp" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding LiveGpuTemp, StringFormat={}{0}°C}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                        <TextBlock Text="Coolant" Style="{StaticResource TextSubtle}" FontSize="9" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding LiveCoolantTemp, StringFormat={}{0}°C}" FontWeight="Bold" FontSize="14" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" />
+                                    </StackPanel>
+                                </Grid>
                             </Border>
 
-                            <!-- Individual Channel Sliders Summary -->
+                            <!-- Fan Channels Summary List -->
                             <ItemsControl ItemsSource="{Binding FanChannels}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Background="{StaticResource CardBgBrush}" CornerRadius="8" Padding="10,6" Margin="0,0,0,6" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                        <Border Background="{StaticResource CardBgBrush}" CornerRadius="8" Padding="10,7" Margin="0,0,0,6" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
                                             <Grid>
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
-                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding ArabicTitle}" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" />
+                                                    <TextBlock Text="{Binding SensorSourceLabel}" Style="{StaticResource TextSubtle}" FontSize="9" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Rpm, StringFormat={}{0:N0} RPM}" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" FontSize="11" Margin="0,0,8,0" />
-                                                    <TextBlock Text="{Binding TargetPercent, StringFormat={}{0:0}%}" Style="{StaticResource TextSubtle}" FontSize="10" />
+                                                    <Border Background="#161F30" CornerRadius="4" Padding="6,2">
+                                                        <TextBlock Text="{Binding TargetPercent, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                    </Border>
                                                 </StackPanel>
                                             </Grid>
                                         </Border>
@@ -179,17 +332,33 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Presets Card -->
-                    <Border Style="{StaticResource GlassCard}" Padding="18">
+                    <!-- Acoustic & Thermal Presets Card -->
+                    <Border Style="{StaticResource GlassCard}" Padding="16">
                         <StackPanel>
-                            <Grid Margin="0,0,0,12">
-                                <TextBlock Text="Presets" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" />
-                                <TextBlock Text="Acoustics Profile" Style="{StaticResource TextSubtle}" HorizontalAlignment="Right" FontSize="11" />
+                            <Grid Margin="0,0,0,10">
+                                <TextBlock Text="الأنماط الصوتية الجاهزة (Presets)" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
                             </Grid>
 
-                            <Button Content="Silent (Under 30 dBA)" Command="{Binding SelectPresetCommand}" CommandParameter="Silent" Style="{StaticResource NexusPillButton}" Height="34" Margin="0,0,0,6" HorizontalContentAlignment="Left" Padding="14,0" />
-                            <Button Content="Balanced (Dynamic Curve)" Command="{Binding SelectPresetCommand}" CommandParameter="Balanced" Style="{StaticResource NexusAccentButton}" Height="34" Margin="0,0,0,6" HorizontalContentAlignment="Left" Padding="14,0" />
-                            <Button Content="Performance (High Airflow)" Command="{Binding SelectPresetCommand}" CommandParameter="Performance" Style="{StaticResource NexusPillButton}" Height="34" HorizontalContentAlignment="Left" Padding="14,0" />
+                            <Button Command="{Binding SelectPresetCommand}" CommandParameter="Silent" Style="{StaticResource NexusPillButton}" Height="34" Margin="0,0,0,6" HorizontalContentAlignment="Left" Padding="14,0">
+                                <Grid Width="220">
+                                    <TextBlock Text="هادئ جدا (Silent - تحت 30 dBA)" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
+                            <Button Command="{Binding SelectPresetCommand}" CommandParameter="Balanced" Style="{StaticResource NexusAccentButton}" Height="34" Margin="0,0,0,6" HorizontalContentAlignment="Left" Padding="14,0">
+                                <Grid Width="220">
+                                    <TextBlock Text="متوازن ديناميكي (Balanced)" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
+                            <Button Command="{Binding SelectPresetCommand}" CommandParameter="Performance" Style="{StaticResource NexusPillButton}" Height="34" Margin="0,0,0,6" HorizontalContentAlignment="Left" Padding="14,0">
+                                <Grid Width="220">
+                                    <TextBlock Text="أداء فائق وتدفق مرتفع (Performance)" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
+                            <Button Command="{Binding SelectPresetCommand}" CommandParameter="ZeroRpm" Style="{StaticResource NexusPillButton}" Height="34" HorizontalContentAlignment="Left" Padding="14,0">
+                                <Grid Width="220">
+                                    <TextBlock Text="الخمول الصامت (Zero-RPM تحت 45°C)" FontWeight="SemiBold" FontSize="11" VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
                         </StackPanel>
                     </Border>
 

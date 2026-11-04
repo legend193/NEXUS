@@ -216,7 +216,7 @@ public class LianLiUniFanController : IRgbDevice, IDisposable
             packet[0] = TransactionId; // 0xE0
             packet[1] = (byte)(0x20 + Math.Clamp(channel, 0, 3));
             packet[2] = 0x00; // PWM Duty mode
-            packet[3] = (byte)Math.Clamp(speedPercent, 20, 100);
+            packet[3] = speedPercent <= 0 ? (byte)0 : (byte)Math.Clamp(speedPercent, 20, 100);
 
             WriteFile(_handle, packet, (uint)packet.Length, out _, IntPtr.Zero);
         }

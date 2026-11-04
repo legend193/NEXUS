@@ -34,6 +34,12 @@ public class FanCurveCanvas : FrameworkElement
     private static readonly Brush BackgroundCardBrush = new SolidColorBrush(Color.FromArgb(255, 13, 16, 23));
     private static readonly Pen BackgroundBorderPen = new(new SolidColorBrush(Color.FromArgb(255, 28, 35, 50)), 1.0);
 
+    private static readonly Brush NodeHoverGlow = new SolidColorBrush(Color.FromArgb(90, 0, 210, 255));
+    private static readonly Pen NodeHoverPen = new(new SolidColorBrush(Color.FromRgb(255, 255, 255)), 2.5);
+
+    private int _hoveredIndex = -1;
+    private int _draggedIndex = -1;
+
     static FanCurveCanvas()
     {
         GridPen.Freeze();
@@ -47,6 +53,8 @@ public class FanCurveCanvas : FrameworkElement
         NodeFillBrush.Freeze();
         NodePen.Freeze();
         NodeCenterBrush.Freeze();
+        NodeHoverGlow.Freeze();
+        NodeHoverPen.Freeze();
         TextMutedBrush.Freeze();
         TextNeedleBrush.Freeze();
         BackgroundCardBrush.Freeze();
@@ -239,13 +247,43 @@ public class FanCurveCanvas : FrameworkElement
         dc.DrawGeometry(null, CurvePen, strokeGeo);
 
         // 5. Draw Control Nodes
-        foreach (var pt in rawPoints)
+        for (int i = 0; i < rawPoints.Count; i++)
         {
+            var pt = rawPoints[i];
             double nx = plotX + Math.Clamp(pt.TemperatureCelsius / 100.0, 0, 1) * plotW;
             double ny = plotBottom - Math.Clamp(pt.FanSpeedPercent / 100.0, 0, 1) * plotH;
 
-            dc.DrawEllipse(NodeFillBrush, NodePen, new Point(nx, ny), 5.5, 5.5);
-            dc.DrawEllipse(NodeCenterBrush, null, new Point(nx, ny), 2.0, 2.0);
+            bool isHighlighted = (i == _hoveredIndex || i == _draggedIndex);
+            if (isHighlighted)
+            {
+                dc.DrawEllipse(NodeHoverGlow, null, new Point(nx, ny), 12.0, 12.0);
+                dc.DrawEllipse(NodeFillBrush, NodeHoverPen, new Point(nx, ny), 7.0, 7.0);
+                dc.DrawEllipse(NodeCenterBrush, null, new Point(nx, ny), 3.0, 3.0);
+
+                // Show dynamic tooltip for the dragged/hovered node
+                string nodeTag = $"{pt.TemperatureCelsius:0}°C : {pt.FanSpeedPercent:0}%";
+                var nodeFt = new FormattedText(
+                    nodeTag,
+                    CultureInfo.InvariantCulture,
+                    FlowDirection.LeftToRight,
+                    LabelTypeface,
+                    9.0,
+                    TextNeedleBrush,
+                    1.25);
+                double nPillW = nodeFt.Width + 10;
+                double nPillH = nodeFt.Height + 4;
+                double nPillX = Math.Clamp(nx - nPillW / 2, plotX, plotRight - nPillW);
+                double nPillY = ny - nPillH - 10;
+                if (nPillY < plotY) nPillY = ny + 12;
+
+                dc.DrawRoundedRectangle(NeedlePillBg, NeedlePillBorder, new Rect(nPillX, nPillY, nPillW, nPillH), 4, 4);
+                dc.DrawText(nodeFt, new Point(nPillX + 5, nPillY + 2));
+            }
+            else
+            {
+                dc.DrawEllipse(NodeFillBrush, NodePen, new Point(nx, ny), 5.5, 5.5);
+                dc.DrawEllipse(NodeCenterBrush, null, new Point(nx, ny), 2.0, 2.0);
+            }
         }
 
         // 6. LIVE CURRENT TEMPERATURE NEEDLE
@@ -280,5 +318,125 @@ public class FanCurveCanvas : FrameworkElement
 
         dc.DrawRoundedRectangle(NeedlePillBg, NeedlePillBorder, new Rect(pillX, pillY, pillW, pillH), 4, 4);
         dc.DrawText(tagFt, new Point(pillX + 6, pillY + 3));
+    }
+
+    private void GetPlotBounds(out double plotX, out double plotY, out double plotW, out double plotH, out double plotBottom)
+    {
+        double padLeft = 42.0;
+        double padRight = 24.0;
+        double padTop = 26.0;
+        double padBottom = 26.0;
+
+        plotX = padLeft;
+        plotY = padTop;
+        plotW = Math.Max(10, ActualWidth - padLeft - padRight);
+        plotH = Math.Max(10, ActualHeight - padTop - padBottom);
+        plotBottom = plotY + plotH;
+    }
+
+    protected override void OnMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonDown(e);
+        var pos = e.GetPosition(this);
+        var pointsList = Points?.ToList();
+        if (pointsList == null || pointsList.Count == 0) return;
+
+        GetPlotBounds(out double plotX, out _, out double plotW, out double plotH, out double plotBottom);
+
+        for (int i = 0; i < pointsList.Count; i++)
+        {
+            var pt = pointsList[i];
+            double nx = plotX + Math.Clamp(pt.TemperatureCelsius / 100.0, 0, 1) * plotW;
+            double ny = plotBottom - Math.Clamp(pt.FanSpeedPercent / 100.0, 0, 1) * plotH;
+
+            double distSq = (pos.X - nx) * (pos.X - nx) + (pos.Y - ny) * (pos.Y - ny);
+            if (distSq <= 16 * 16)
+            {
+                _draggedIndex = i;
+                _hoveredIndex = i;
+                CaptureMouse();
+                Cursor = System.Windows.Input.Cursors.Hand;
+                InvalidateVisual();
+                e.Handled = true;
+                break;
+            }
+        }
+    }
+
+    protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        var pos = e.GetPosition(this);
+        var pointsList = Points?.ToList();
+        if (pointsList == null || pointsList.Count == 0) return;
+
+        GetPlotBounds(out double plotX, out _, out double plotW, out double plotH, out double plotBottom);
+
+        if (_draggedIndex >= 0 && IsMouseCaptured && _draggedIndex < pointsList.Count)
+        {
+            double newTemp = ((pos.X - plotX) / plotW) * 100.0;
+            double newSpeed = ((plotBottom - pos.Y) / plotH) * 100.0;
+
+            // Clamping rules to maintain sorted curve
+            double minTemp = _draggedIndex > 0 ? pointsList[_draggedIndex - 1].TemperatureCelsius + 3.0 : 0.0;
+            double maxTemp = _draggedIndex < pointsList.Count - 1 ? pointsList[_draggedIndex + 1].TemperatureCelsius - 3.0 : 100.0;
+
+            newTemp = Math.Clamp(newTemp, minTemp, maxTemp);
+            newSpeed = Math.Clamp(newSpeed, 0.0, 100.0);
+
+            pointsList[_draggedIndex].TemperatureCelsius = Math.Round(newTemp, 0);
+            pointsList[_draggedIndex].FanSpeedPercent = Math.Round(newSpeed, 0);
+
+            InvalidateVisual();
+            e.Handled = true;
+            return;
+        }
+
+        // Hit-test for hover
+        int newHover = -1;
+        for (int i = 0; i < pointsList.Count; i++)
+        {
+            var pt = pointsList[i];
+            double nx = plotX + Math.Clamp(pt.TemperatureCelsius / 100.0, 0, 1) * plotW;
+            double ny = plotBottom - Math.Clamp(pt.FanSpeedPercent / 100.0, 0, 1) * plotH;
+
+            double distSq = (pos.X - nx) * (pos.X - nx) + (pos.Y - ny) * (pos.Y - ny);
+            if (distSq <= 14 * 14)
+            {
+                newHover = i;
+                break;
+            }
+        }
+
+        if (newHover != _hoveredIndex)
+        {
+            _hoveredIndex = newHover;
+            Cursor = _hoveredIndex >= 0 ? System.Windows.Input.Cursors.Hand : System.Windows.Input.Cursors.Arrow;
+            InvalidateVisual();
+        }
+    }
+
+    protected override void OnMouseLeftButtonUp(System.Windows.Input.MouseButtonEventArgs e)
+    {
+        base.OnMouseLeftButtonUp(e);
+        if (_draggedIndex >= 0)
+        {
+            _draggedIndex = -1;
+            ReleaseMouseCapture();
+            Cursor = System.Windows.Input.Cursors.Arrow;
+            InvalidateVisual();
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnMouseLeave(System.Windows.Input.MouseEventArgs e)
+    {
+        base.OnMouseLeave(e);
+        if (_draggedIndex < 0 && _hoveredIndex >= 0)
+        {
+            _hoveredIndex = -1;
+            Cursor = System.Windows.Input.Cursors.Arrow;
+            InvalidateVisual();
+        }
     }
 }

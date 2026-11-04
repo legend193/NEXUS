@@ -257,8 +257,10 @@ public class CorsairCommanderCoreController : IRgbDevice, IDisposable
         SendCommand(CmdCloseEndpoint, null, false);
     }
 
+    private readonly byte[] _portDuty = new byte[7] { 80, 50, 50, 50, 50, 50, 50 }; // Port 0: Pump (~2650 RPM), Ports 1..6: Fans
+
     /// <summary>
-    /// Sets PWM fan speed duty cycle for Corsair Commander CORE fan port (0..6: 0=Pump, 1..6=Fans)
+    /// Sets PWM fan speed duty cycle for a specific Corsair Commander CORE port (0=Pump, 1..6=Fans)
     /// </summary>
     public void SetFanSpeed(int portIndex, int speedPercent)
     {
@@ -266,10 +268,35 @@ public class CorsairCommanderCoreController : IRgbDevice, IDisposable
 
         lock (_ioLock)
         {
-            byte[] fanDuty = new byte[7];
-            for (int i = 0; i < fanDuty.Length; i++) fanDuty[i] = (byte)Math.Clamp(speedPercent, 20, 100);
-            WriteEndpointData(new byte[] { 0x17, 0x00 }, new byte[] { 0x05, 0x00 }, fanDuty);
+            if (portIndex >= 0 && portIndex < _portDuty.Length)
+            {
+                _portDuty[portIndex] = (byte)Math.Clamp(speedPercent, 0, 100);
+            }
+            else
+            {
+                // If portIndex is -1 or out of range, apply to all fan ports (1..6) leaving pump intact
+                for (int i = 1; i < _portDuty.Length; i++)
+                {
+                    _portDuty[i] = (byte)Math.Clamp(speedPercent, 0, 100);
+                }
+            }
+            WriteEndpointData(new byte[] { 0x17, 0x00 }, new byte[] { 0x05, 0x00 }, _portDuty);
         }
+    }
+
+    /// <summary>
+    /// Sets dedicated discrete AIO Pump speed mode (Quiet ~2200 RPM, Balanced ~2650 RPM, Extreme ~2850 RPM)
+    /// </summary>
+    public void SetPumpMode(Nexus.Abstractions.Cooling.PumpSpeedMode mode)
+    {
+        byte duty = mode switch
+        {
+            Nexus.Abstractions.Cooling.PumpSpeedMode.Quiet => 55,
+            Nexus.Abstractions.Cooling.PumpSpeedMode.Balanced => 80,
+            Nexus.Abstractions.Cooling.PumpSpeedMode.Extreme => 100,
+            _ => 80
+        };
+        SetFanSpeed(0, duty);
     }
 
     public Task ShutdownAsync(CancellationToken cancellationToken = default)

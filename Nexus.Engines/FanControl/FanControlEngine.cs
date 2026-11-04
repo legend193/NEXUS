@@ -15,6 +15,10 @@ public class FanControlEngine : IFanControlEngine, IDisposable
     private IDisposable? _telemetrySub;
     private bool _isDisposed;
 
+    private readonly ConcurrentDictionary<string, double> _smoothedTemperatures = new();
+    private readonly ConcurrentDictionary<string, double> _currentAppliedSpeeds = new();
+    private readonly ConcurrentDictionary<string, DateTime> _lastUpdateTimes = new();
+
     public IReadOnlyList<IFanController> FanControllers => _controllers.Values.ToList();
     public IReadOnlyList<FanCurve> SavedCurves => _curves.Values.ToList();
     public bool IsSafetyWatchdogActive { get; private set; } = true;
@@ -24,19 +28,21 @@ public class FanControlEngine : IFanControlEngine, IDisposable
         _eventBus = eventBus;
         _logger = logger;
 
-        // Default Curves
+        // Default Presets
         var defaultBalanced = new FanCurve
         {
             Id = "curve-balanced",
-            Name = "Silent to Performance",
+            Name = "Dynamic Balanced",
             TargetSensorId = "CPU",
+            SensorSource = SensorSourceType.Cpu,
             MinFanSpeedPercent = 25,
             EmergencyTempCelsius = 85,
+            Smoothing = SmoothingSpeed.Smooth,
             Points = new List<FanCurvePoint>
             {
-                new(30, 25),
-                new(50, 40),
-                new(65, 60),
+                new(20, 25),
+                new(40, 35),
+                new(60, 55),
                 new(75, 80),
                 new(85, 100)
             }
@@ -45,22 +51,44 @@ public class FanControlEngine : IFanControlEngine, IDisposable
         var quietCurve = new FanCurve
         {
             Id = "curve-quiet",
-            Name = "Acoustic Priority",
+            Name = "Acoustic Silent",
             TargetSensorId = "CPU",
+            SensorSource = SensorSourceType.Cpu,
             MinFanSpeedPercent = 20,
             EmergencyTempCelsius = 85,
+            Smoothing = SmoothingSpeed.Smooth,
             Points = new List<FanCurvePoint>
             {
-                new(30, 20),
-                new(60, 30),
-                new(75, 55),
-                new(82, 80),
+                new(20, 20),
+                new(45, 25),
+                new(65, 40),
+                new(78, 65),
+                new(85, 100)
+            }
+        };
+
+        var performanceCurve = new FanCurve
+        {
+            Id = "curve-performance",
+            Name = "Performance Airflow",
+            TargetSensorId = "Max",
+            SensorSource = SensorSourceType.MaxCpuGpu,
+            MinFanSpeedPercent = 40,
+            EmergencyTempCelsius = 85,
+            Smoothing = SmoothingSpeed.Balanced,
+            Points = new List<FanCurvePoint>
+            {
+                new(20, 40),
+                new(40, 55),
+                new(60, 75),
+                new(75, 90),
                 new(85, 100)
             }
         };
 
         _curves.TryAdd(defaultBalanced.Id, defaultBalanced);
         _curves.TryAdd(quietCurve.Id, quietCurve);
+        _curves.TryAdd(performanceCurve.Id, performanceCurve);
 
         _telemetrySub = _eventBus.Subscribe<SystemTelemetrySnapshot>(OnTelemetryReceived);
     }
@@ -128,20 +156,73 @@ public class FanControlEngine : IFanControlEngine, IDisposable
     {
         if (!IsSafetyWatchdogActive) return;
 
+        double cpuTemp = snapshot.CpuTemperatureCelsius ?? 45.0;
+        double gpuTemp = snapshot.GpuTemperatureCelsius ?? 50.0;
+        double coolantTemp = Math.Max(30.0, (cpuTemp * 0.35) + 16.0); // Liquid temperature changes slowly with ambient base
+
+        DateTime now = DateTime.UtcNow;
+
         foreach (var controller in _controllers.Values)
         {
             if (!controller.SupportsDirectControl) continue;
 
-            double targetTemp = snapshot.CpuTemperatureCelsius ?? 45.0;
-            if (controller.ActiveCurve.TargetSensorId.Equals("GPU", StringComparison.OrdinalIgnoreCase) && snapshot.GpuTemperatureCelsius.HasValue)
+            var curve = controller.ActiveCurve;
+            double rawTemp = curve.SensorSource switch
             {
-                targetTemp = snapshot.GpuTemperatureCelsius.Value;
+                SensorSourceType.Gpu => gpuTemp,
+                SensorSourceType.Coolant => coolantTemp,
+                SensorSourceType.MaxCpuGpu => Math.Max(cpuTemp, gpuTemp),
+                _ => cpuTemp
+            };
+
+            // Emergency thermal override (85°C watchdog)
+            if (rawTemp >= curve.EmergencyTempCelsius)
+            {
+                _smoothedTemperatures[controller.FanId] = rawTemp;
+                _currentAppliedSpeeds[controller.FanId] = 100.0;
+                await controller.SetSpeedPercentAsync(100.0);
+                continue;
             }
 
-            double speedPercent = controller.ActiveCurve.Evaluate(targetTemp);
+            // Exponential Moving Average (EMA) thermal filter to eliminate fan surging ("التبريد يكبس")
+            double alpha = curve.Smoothing switch
+            {
+                SmoothingSpeed.Smooth => 0.18,   // Highly filtered, resilient to transient spikes
+                SmoothingSpeed.Balanced => 0.40, // Responsive yet smooth
+                _ => 1.0                         // Direct (no filter)
+            };
+
+            double prevSmoothed = _smoothedTemperatures.GetOrAdd(controller.FanId, rawTemp);
+            double smoothed = (alpha * rawTemp) + ((1.0 - alpha) * prevSmoothed);
+            _smoothedTemperatures[controller.FanId] = smoothed;
+
+            // Evaluate target speed from smoothed temperature
+            double targetSpeed = curve.Evaluate(smoothed);
+
+            // Progressive step-smoothing rate limit
+            double prevSpeed = _currentAppliedSpeeds.GetOrAdd(controller.FanId, targetSpeed);
+            DateTime lastTime = _lastUpdateTimes.GetOrAdd(controller.FanId, now);
+            double dt = Math.Clamp((now - lastTime).TotalSeconds, 0.1, 2.0);
+            _lastUpdateTimes[controller.FanId] = now;
+
+            double maxStepUp = 30.0 * dt;   // Max 30% speed increase per second
+            double maxStepDown = 15.0 * dt; // Max 15% speed decrease per second (gradual quiet spin-down)
+
+            double finalSpeed;
+            if (targetSpeed > prevSpeed)
+            {
+                finalSpeed = Math.Min(targetSpeed, prevSpeed + maxStepUp);
+            }
+            else
+            {
+                finalSpeed = Math.Max(targetSpeed, prevSpeed - maxStepDown);
+            }
+
+            _currentAppliedSpeeds[controller.FanId] = finalSpeed;
+
             try
             {
-                await controller.SetSpeedPercentAsync(speedPercent);
+                await controller.SetSpeedPercentAsync(finalSpeed);
             }
             catch (Exception ex)
             {
