@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Nexus.Abstractions.Audio;
 using Nexus.App.Models;
+using Nexus.App.Navigation;
 using Nexus.App.Services;
 
 namespace Nexus.App.ViewModels;
@@ -434,7 +435,7 @@ public class SonarChannelStripItem : ViewModelBase
     }
 }
 
-public class AudioStudioViewModel : ViewModelBase, IDisposable
+public class AudioStudioViewModel : ViewModelBase, IActiveAware, IDisposable
 {
     private readonly IAudioEngine _audioEngine;
     private string _selectedTopTab = "Mixer";
@@ -442,6 +443,26 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
     private float _eqPreAmpGainDb = -2.5f;
     private string _eqCurvePathData = string.Empty;
     private string _eqCurveFillData = string.Empty;
+    private bool _isActive;
+
+    public bool IsActive
+    {
+        get => _isActive;
+        set
+        {
+            if (SetProperty(ref _isActive, value))
+            {
+                if (value)
+                {
+                    _meterTimer.Start();
+                }
+                else
+                {
+                    _meterTimer.Stop();
+                }
+            }
+        }
+    }
 
     public double ChatMixSliderValue
     {
@@ -1069,10 +1090,10 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         UpdateEqCurve();
         RefreshManageableDevices();
 
-        // 35ms Peak Meter animation loop (decay and responsiveness)
-        _meterTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(35) };
+        // 50ms Peak Meter animation loop (decay and responsiveness, active-aware)
+        _meterTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         _meterTimer.Tick += OnMeterTick;
-        _meterTimer.Start();
+        // Meter timer starts automatically when IsActive is set to true by MainViewModel
 
         // 2-second background session poll
         _refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };

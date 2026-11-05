@@ -1,17 +1,32 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Nexus.Abstractions.Sensors;
+using Nexus.App.Navigation;
 using Nexus.Engines.Hardware;
 
 namespace Nexus.App.ViewModels;
 
-public class SensorRowItem
+public class SensorRowItem : ViewModelBase
 {
+    private string _value = string.Empty;
+    private string _status = "Normal";
+
     public string Category { get; set; } = string.Empty;
     public string SensorName { get; set; } = string.Empty;
-    public string Value { get; set; } = string.Empty;
-    public string Status { get; set; } = "Normal";
+
+    public string Value
+    {
+        get => _value;
+        set => SetProperty(ref _value, value);
+    }
+
+    public string Status
+    {
+        get => _status;
+        set => SetProperty(ref _status, value);
+    }
 }
 
 public class ProcessUsageItem
@@ -21,11 +36,32 @@ public class ProcessUsageItem
     public string RamUsage { get; set; } = string.Empty;
 }
 
-public class HardwareMonitorViewModel : ViewModelBase, IDisposable
+public class HardwareMonitorViewModel : ViewModelBase, IActiveAware, IDisposable
 {
     private readonly HardwareEngine _hardwareEngine;
     private readonly DispatcherTimer _timer;
     private int _pollingIntervalMs = 1000;
+    private bool _isActive;
+
+    public bool IsActive
+    {
+        get => _isActive;
+        set
+        {
+            if (SetProperty(ref _isActive, value))
+            {
+                if (value)
+                {
+                    _timer.Start();
+                    _ = RefreshAsync();
+                }
+                else
+                {
+                    _timer.Stop();
+                }
+            }
+        }
+    }
 
     public ObservableCollection<SensorRowItem> SensorRows { get; } = new();
     public ObservableCollection<ProcessUsageItem> TopProcesses { get; } = new();
@@ -79,9 +115,7 @@ public class HardwareMonitorViewModel : ViewModelBase, IDisposable
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(_pollingIntervalMs) };
         _timer.Tick += async (_, _) => await RefreshAsync();
-        _timer.Start();
-
-        _ = RefreshAsync();
+        // Timer starts automatically when IsActive is set to true by MainViewModel
     }
 
     public void Dispose()
@@ -89,10 +123,29 @@ public class HardwareMonitorViewModel : ViewModelBase, IDisposable
         _timer.Stop();
     }
 
+    private void SetSensorValue(string category, string sensorName, string value, string status = "Normal")
+    {
+        var row = SensorRows.FirstOrDefault(r => r.Category == category && r.SensorName == sensorName);
+        if (row != null)
+        {
+            row.Value = value;
+            row.Status = status;
+        }
+        else
+        {
+            SensorRows.Add(new SensorRowItem
+            {
+                Category = category,
+                SensorName = sensorName,
+                Value = value,
+                Status = status
+            });
+        }
+    }
+
     public async Task RefreshAsync()
     {
         var snapshot = await _hardwareEngine.RefreshSnapshotAsync();
-        SensorRows.Clear();
 
         if (snapshot.CpuTemperatureCelsius.HasValue) LatestCpuTemp = snapshot.CpuTemperatureCelsius.Value;
         if (snapshot.GpuTemperatureCelsius.HasValue) LatestGpuTemp = snapshot.GpuTemperatureCelsius.Value;
@@ -126,55 +179,22 @@ public class HardwareMonitorViewModel : ViewModelBase, IDisposable
             TopProcesses.Add(new ProcessUsageItem { Name = "Steam Client", CpuUsage = "0.2%", RamUsage = "180 MB" });
         }
 
-        // CPU
-        SensorRows.Add(new SensorRowItem { Category = "Processor", SensorName = "CPU Model", Value = snapshot.CpuName });
-        SensorRows.Add(new SensorRowItem { Category = "Processor", SensorName = "Logical Cores", Value = $"{snapshot.CpuLogicalCores} Threads" });
-        SensorRows.Add(new SensorRowItem
-        {
-            Category = "Processor",
-            SensorName = "CPU Total Load",
-            Value = snapshot.CpuUsagePercent.HasValue ? $"{snapshot.CpuUsagePercent.Value:0.0}%" : "N/A"
-        });
-        SensorRows.Add(new SensorRowItem
-        {
-            Category = "Processor",
-            SensorName = "CPU Core Temperature",
-            Value = snapshot.CpuTemperatureCelsius.HasValue ? $"{snapshot.CpuTemperatureCelsius.Value:0.0}°C" : "N/A"
-        });
+        // In-place updates (Zero UI destruction / zero CollectionReset events)
+        SetSensorValue("Processor", "CPU Model", snapshot.CpuName);
+        SetSensorValue("Processor", "Logical Cores", $"{snapshot.CpuLogicalCores} Threads");
+        SetSensorValue("Processor", "CPU Total Load", snapshot.CpuUsagePercent.HasValue ? $"{snapshot.CpuUsagePercent.Value:0.0}%" : "N/A");
+        SetSensorValue("Processor", "CPU Core Temperature", snapshot.CpuTemperatureCelsius.HasValue ? $"{snapshot.CpuTemperatureCelsius.Value:0.0}°C" : "N/A");
 
-        // GPU
-        SensorRows.Add(new SensorRowItem { Category = "Graphics", SensorName = "GPU Model", Value = snapshot.GpuName });
-        SensorRows.Add(new SensorRowItem { Category = "Graphics", SensorName = "Driver Version", Value = snapshot.GpuDriverVersion ?? "Standard" });
-        SensorRows.Add(new SensorRowItem
-        {
-            Category = "Graphics",
-            SensorName = "GPU Core Load",
-            Value = snapshot.GpuUsagePercent.HasValue ? $"{snapshot.GpuUsagePercent.Value:0.0}%" : "N/A"
-        });
-        SensorRows.Add(new SensorRowItem
-        {
-            Category = "Graphics",
-            SensorName = "GPU Temperature",
-            Value = snapshot.GpuTemperatureCelsius.HasValue ? $"{snapshot.GpuTemperatureCelsius.Value:0.0}°C" : "N/A"
-        });
+        SetSensorValue("Graphics", "GPU Model", snapshot.GpuName);
+        SetSensorValue("Graphics", "Driver Version", snapshot.GpuDriverVersion ?? "Standard");
+        SetSensorValue("Graphics", "GPU Core Load", snapshot.GpuUsagePercent.HasValue ? $"{snapshot.GpuUsagePercent.Value:0.0}%" : "N/A");
+        SetSensorValue("Graphics", "GPU Temperature", snapshot.GpuTemperatureCelsius.HasValue ? $"{snapshot.GpuTemperatureCelsius.Value:0.0}°C" : "N/A");
 
-        // Memory
-        SensorRows.Add(new SensorRowItem
-        {
-            Category = "Memory",
-            SensorName = "Physical RAM Used",
-            Value = $"{snapshot.RamUsedGb:0.0} GB / {snapshot.RamTotalGb:0.0} GB ({snapshot.RamUsagePercent:0.0}%)"
-        });
+        SetSensorValue("Memory", "Physical RAM Used", $"{snapshot.RamUsedGb:0.0} GB / {snapshot.RamTotalGb:0.0} GB ({snapshot.RamUsagePercent:0.0}%)");
 
-        // Disks
         foreach (var disk in snapshot.Disks)
         {
-            SensorRows.Add(new SensorRowItem
-            {
-                Category = "Storage",
-                SensorName = $"{disk.Name} ({disk.VolumeLabel})",
-                Value = $"{disk.UsedGb:0.0} GB used of {disk.TotalGb:0.0} GB ({disk.UsagePercent:0.0}%)"
-            });
+            SetSensorValue("Storage", $"{disk.Name} ({disk.VolumeLabel})", $"{disk.UsedGb:0.0} GB used of {disk.TotalGb:0.0} GB ({disk.UsagePercent:0.0}%)");
         }
     }
 }

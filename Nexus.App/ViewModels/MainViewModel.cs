@@ -20,7 +20,21 @@ public class MainViewModel : ViewModelBase
     public ViewModelBase CurrentViewModel
     {
         get => _currentViewModel;
-        set => SetProperty(ref _currentViewModel, value);
+        set
+        {
+            if (_currentViewModel != value)
+            {
+                if (_currentViewModel is IActiveAware oldActive)
+                {
+                    oldActive.IsActive = false;
+                }
+                if (value is IActiveAware newActive)
+                {
+                    newActive.IsActive = true;
+                }
+                SetProperty(ref _currentViewModel, value);
+            }
+        }
     }
 
     public NavigationItem SelectedNavItem
@@ -85,6 +99,10 @@ public class MainViewModel : ViewModelBase
 
         _currentViewModel = dashboardVm;
         Dashboard = dashboardVm;
+        if (_currentViewModel is IActiveAware initActive)
+        {
+            initActive.IsActive = true;
+        }
         _selectedNavItem = NavigationItems[0];
         _selectedNavItem.IsSelected = true;
 

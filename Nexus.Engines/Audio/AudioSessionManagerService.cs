@@ -296,7 +296,7 @@ public class AudioSessionManagerService : IMMNotificationClient, IDisposable
     {
         _meteringTask = Task.Run(async () =>
         {
-            using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(16)); // ~60 FPS
+            using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(50)); // ~20 FPS (smooth & low CPU)
             while (!_cts.Token.IsCancellationRequested)
             {
                 try

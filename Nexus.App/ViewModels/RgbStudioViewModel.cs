@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Nexus.Abstractions.Cooling;
 using Nexus.Abstractions.Rgb;
+using Nexus.App.Navigation;
 using Nexus.Core.DeviceManager;
 using Nexus.Core.Services;
 using Nexus.Engines.RGB;
@@ -115,7 +116,7 @@ public class RgbStudioPersistentState
     public string CustomImagePath { get; set; } = string.Empty;
 }
 
-public class RgbStudioViewModel : ViewModelBase, IDisposable
+public class RgbStudioViewModel : ViewModelBase, IActiveAware, IDisposable
 {
     private readonly IRgbEngine _rgbEngine;
     private readonly DeviceManager _deviceManager;
@@ -123,6 +124,26 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
     private readonly DispatcherTimer _animationTimer;
     private readonly System.Diagnostics.Stopwatch _stopwatch = new();
     private long _lastLcdTick;
+    private bool _isActive;
+
+    public bool IsActive
+    {
+        get => _isActive;
+        set
+        {
+            if (SetProperty(ref _isActive, value))
+            {
+                if (value)
+                {
+                    _animationTimer.Start();
+                }
+                else
+                {
+                    _animationTimer.Stop();
+                }
+            }
+        }
+    }
 
     private iCueDeviceCanvasItem? _selectedCanvasDevice;
     private RgbEffectType _selectedEffect = RgbEffectType.Static;
@@ -710,11 +731,11 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
             IsLcdCustomizerOpen = false;
         });
 
-        // 60 FPS Canvas visual animation
+        // 25 FPS Canvas visual animation (throttled & active-aware)
         _stopwatch.Start();
-        _animationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(20) };
+        _animationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(40) };
         _animationTimer.Tick += OnAnimationTick;
-        _animationTimer.Start();
+        // Timer starts automatically when IsActive is set to true by MainViewModel
 
         // Push initial state
         PushEffectToHardware();
@@ -1018,8 +1039,23 @@ public class RgbStudioViewModel : ViewModelBase, IDisposable
                     break;
             }
 
-            dev.PrimaryGlow = new SolidColorBrush(Color.FromRgb(c1.R, c1.G, c1.B));
-            dev.SecondaryGlow = new SolidColorBrush(Color.FromRgb(c2.R, c2.G, c2.B));
+            if (dev.PrimaryGlow is SolidColorBrush sb1 && !sb1.IsFrozen)
+            {
+                sb1.Color = Color.FromRgb(c1.R, c1.G, c1.B);
+            }
+            else
+            {
+                dev.PrimaryGlow = new SolidColorBrush(Color.FromRgb(c1.R, c1.G, c1.B));
+            }
+
+            if (dev.SecondaryGlow is SolidColorBrush sb2 && !sb2.IsFrozen)
+            {
+                sb2.Color = Color.FromRgb(c2.R, c2.G, c2.B);
+            }
+            else
+            {
+                dev.SecondaryGlow = new SolidColorBrush(Color.FromRgb(c2.R, c2.G, c2.B));
+            }
         }
 
         long elapsedMs = _stopwatch.ElapsedMilliseconds;

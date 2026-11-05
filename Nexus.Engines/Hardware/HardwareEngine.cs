@@ -291,8 +291,24 @@ public class HardwareEngine : IHardwareMonitor, IDisposable
         }
     }
 
+    private readonly object _snapshotLock = new();
+    private DateTime _lastSnapshotTime = DateTime.MinValue;
+    private static readonly TimeSpan SnapshotCacheDuration = TimeSpan.FromMilliseconds(850);
+    private DateTime _lastDiskScanTime = DateTime.MinValue;
+    private readonly List<StorageTelemetry> _cachedDisks = new();
+    private bool _isWmiAcpiChecked;
+    private bool _isWmiAcpiAvailable;
+
     public Task<SystemTelemetrySnapshot> RefreshSnapshotAsync(CancellationToken cancellationToken = default)
     {
+        lock (_snapshotLock)
+        {
+            if (_currentSnapshot != null && (DateTime.UtcNow - _lastSnapshotTime) < SnapshotCacheDuration)
+            {
+                return Task.FromResult(_currentSnapshot);
+            }
+        }
+
         var snapshot = new SystemTelemetrySnapshot
         {
             TimestampUtc = DateTime.UtcNow,
@@ -342,26 +358,40 @@ public class HardwareEngine : IHardwareMonitor, IDisposable
             snapshot.RamUsedGb = Math.Max(0, snapshot.RamTotalGb - availGb);
         }
 
-        // 3. Real Storage Drives
-        try
+        // 3. Storage Drives (cached for 30s to prevent disk I/O thrashing)
+        if ((DateTime.UtcNow - _lastDiskScanTime).TotalSeconds > 30 || _cachedDisks.Count == 0)
         {
-            foreach (var drive in DriveInfo.GetDrives())
+            try
             {
-                if (drive.IsReady && drive.DriveType == DriveType.Fixed)
+                var disks = new List<StorageTelemetry>();
+                foreach (var drive in DriveInfo.GetDrives())
                 {
-                    snapshot.Disks.Add(new StorageTelemetry
+                    if (drive.IsReady && drive.DriveType == DriveType.Fixed)
                     {
-                        Name = drive.Name,
-                        VolumeLabel = string.IsNullOrWhiteSpace(drive.VolumeLabel) ? "Local Disk" : drive.VolumeLabel,
-                        TotalGb = drive.TotalSize / (1024.0 * 1024.0 * 1024.0),
-                        FreeGb = drive.AvailableFreeSpace / (1024.0 * 1024.0 * 1024.0)
-                    });
+                        disks.Add(new StorageTelemetry
+                        {
+                            Name = drive.Name,
+                            VolumeLabel = string.IsNullOrWhiteSpace(drive.VolumeLabel) ? "Local Disk" : drive.VolumeLabel,
+                            TotalGb = drive.TotalSize / (1024.0 * 1024.0 * 1024.0),
+                            FreeGb = drive.AvailableFreeSpace / (1024.0 * 1024.0 * 1024.0)
+                        });
+                    }
+                }
+                lock (_cachedDisks)
+                {
+                    _cachedDisks.Clear();
+                    _cachedDisks.AddRange(disks);
+                    _lastDiskScanTime = DateTime.UtcNow;
                 }
             }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "Error reading drive info.");
+            }
         }
-        catch (Exception ex)
+        lock (_cachedDisks)
         {
-            _logger?.LogDebug(ex, "Error reading drive info.");
+            snapshot.Disks.AddRange(_cachedDisks);
         }
 
         // 4. Live GPU Telemetry via NVML (Core Temp, Utilization %, Live VRAM)
@@ -389,29 +419,49 @@ public class HardwareEngine : IHardwareMonitor, IDisposable
             }
         }
 
-        // 5. Thermal & Sensor readings: ACPI Thermal Zone (Reject uncalibrated dummy BIOS stubs < 28°C)
+        // 5. Thermal & Sensor readings: ACPI Thermal Zone (Single-probed, zero leak)
         double? acpiTemp = null;
-        try
+        if (!_isWmiAcpiChecked)
         {
-            using var searcher = new ManagementObjectSearcher(@"root\WMI", "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature");
-            foreach (var obj in searcher.Get())
+            _isWmiAcpiChecked = true;
+            try
             {
-                if (obj["CurrentTemperature"] != null && double.TryParse(obj["CurrentTemperature"].ToString(), out var kelvinTenths))
+                using var searcher = new ManagementObjectSearcher(@"root\WMI", "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature");
+                using var coll = searcher.Get();
+                _isWmiAcpiAvailable = coll.Count > 0;
+            }
+            catch
+            {
+                _isWmiAcpiAvailable = false;
+            }
+        }
+
+        if (_isWmiAcpiAvailable)
+        {
+            try
+            {
+                using var searcher = new ManagementObjectSearcher(@"root\WMI", "SELECT CurrentTemperature FROM MSAcpi_ThermalZoneTemperature");
+                using var coll = searcher.Get();
+                foreach (ManagementObject obj in coll)
                 {
-                    // MSAcpi represents temperature in tenths of Kelvin
-                    double celsius = (kelvinTenths / 10.0) - 273.15;
-                    // Reject dummy ACPI BIOS stubs (e.g. 2900 / 16.9°C on AM4/AM5 AGESA)
-                    if (celsius >= 28.0 && celsius < 115.0)
+                    using (obj)
                     {
-                        acpiTemp = Math.Round(celsius, 1);
-                        break;
+                        if (obj["CurrentTemperature"] != null && double.TryParse(obj["CurrentTemperature"].ToString(), out var kelvinTenths))
+                        {
+                            double celsius = (kelvinTenths / 10.0) - 273.15;
+                            if (celsius >= 28.0 && celsius < 115.0)
+                            {
+                                acpiTemp = Math.Round(celsius, 1);
+                                break;
+                            }
+                        }
                     }
                 }
             }
-        }
-        catch
-        {
-            acpiTemp = null;
+            catch
+            {
+                acpiTemp = null;
+            }
         }
 
         if (acpiTemp.HasValue)
@@ -420,15 +470,18 @@ public class HardwareEngine : IHardwareMonitor, IDisposable
         }
         else
         {
-            // Thermodynamic estimation model for AMD Ryzen high-end desktop CPU on Liquid AIO:
-            // Base idle equilibrium (~38°C) + dynamic core dissipation based on load
+            // Thermodynamic estimation model for desktop CPU on Liquid AIO
             double usage = snapshot.CpuUsagePercent ?? 8.0;
             double oscillation = Math.Sin(Environment.TickCount64 / 3500.0) * 0.6;
             double modeled = 38.5 + (usage * 0.32) + oscillation;
             snapshot.CpuTemperatureCelsius = Math.Round(modeled, 1);
         }
 
-        _currentSnapshot = snapshot;
+        lock (_snapshotLock)
+        {
+            _currentSnapshot = snapshot;
+            _lastSnapshotTime = DateTime.UtcNow;
+        }
         return Task.FromResult(snapshot);
     }
 
