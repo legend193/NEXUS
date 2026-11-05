@@ -182,6 +182,54 @@ public class AudioRoutingService : IAudioRoutingService
                             hDeviceId);
                     }
 
+                    // Fallback: If formatted device string failed, try with raw/unpacked endpoint ID
+                    if (hr1 < 0 && hr2 < 0 && !string.IsNullOrWhiteSpace(endpointDeviceId))
+                    {
+                        string cleanId = UnpackDeviceId(endpointDeviceId);
+                        if (!string.IsNullOrEmpty(cleanId))
+                        {
+                            if (hDeviceId != IntPtr.Zero)
+                            {
+                                CombaseNativeMethods.WindowsDeleteString(hDeviceId);
+                                hDeviceId = IntPtr.Zero;
+                            }
+
+                            CombaseNativeMethods.WindowsCreateString(
+                                cleanId,
+                                (uint)cleanId.Length,
+                                out hDeviceId);
+
+                            if (_policyConfig21H2 != null)
+                            {
+                                hr1 = _policyConfig21H2.SetPersistedDefaultAudioEndpoint(
+                                    (uint)processId,
+                                    EDataFlow.eRender,
+                                    ERole.eMultimedia,
+                                    hDeviceId);
+
+                                hr2 = _policyConfig21H2.SetPersistedDefaultAudioEndpoint(
+                                    (uint)processId,
+                                    EDataFlow.eRender,
+                                    ERole.eConsole,
+                                    hDeviceId);
+                            }
+                            else if (_policyConfigDownlevel != null)
+                            {
+                                hr1 = _policyConfigDownlevel.SetPersistedDefaultAudioEndpoint(
+                                    (uint)processId,
+                                    EDataFlow.eRender,
+                                    ERole.eMultimedia,
+                                    hDeviceId);
+
+                                hr2 = _policyConfigDownlevel.SetPersistedDefaultAudioEndpoint(
+                                    (uint)processId,
+                                    EDataFlow.eRender,
+                                    ERole.eConsole,
+                                    hDeviceId);
+                            }
+                        }
+                    }
+
                     bool success = hr1 >= 0 || hr2 >= 0;
                     _logger?.LogInformation("SetAppOutputDevice PID {Pid} -> {DeviceId} (hr1: 0x{Hr1:X8}, hr2: 0x{Hr2:X8})",
                         processId, endpointDeviceId, hr1, hr2);

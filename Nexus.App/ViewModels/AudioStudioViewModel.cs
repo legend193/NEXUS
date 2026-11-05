@@ -39,11 +39,14 @@ public class AudioSessionItem : ViewModelBase
     private bool _isMuted;
     private float _volume = 100f;
 
+    public IAudioSession? Session => _session;
     public int ProcessId => _session?.ProcessId ?? 0;
     public float PeakLevel => _session?.PeakLevel ?? 0f;
     public string DisplayName { get; init; } = string.Empty;
     public string ProcessName { get; init; } = string.Empty;
     public string DisplayNameUpper => (string.IsNullOrWhiteSpace(ProcessName) ? DisplayName : ProcessName.Replace(".exe", "", StringComparison.OrdinalIgnoreCase)).ToUpperInvariant();
+
+    public Action<AudioSessionItem>? OnAppSettingChanged { get; set; }
 
     public string PillColorHex
     {
@@ -79,24 +82,36 @@ public class AudioSessionItem : ViewModelBase
 
     public float Volume
     {
-        get => _session != null ? _session.Volume * 100f : _volume;
+        get => _volume;
         set
         {
-            _volume = value;
-            if (_session != null) _session.Volume = value / 100f;
-            OnPropertyChanged();
+            if (SetProperty(ref _volume, Math.Clamp(value, 0f, 100f)))
+            {
+                OnAppSettingChanged?.Invoke(this);
+            }
         }
     }
 
     public bool IsMuted
     {
-        get => _session != null ? _session.IsMuted : _isMuted;
+        get => _isMuted;
         set
         {
-            _isMuted = value;
-            if (_session != null) _session.IsMuted = value;
-            OnPropertyChanged();
+            if (SetProperty(ref _isMuted, value))
+            {
+                OnAppSettingChanged?.Invoke(this);
+            }
         }
+    }
+
+    public void UpdateLiveMetrics(IAudioSession liveSession)
+    {
+        if (_icon == null)
+        {
+            _icon = AppIconExtractorService.GetProcessIcon(liveSession.ProcessId, liveSession.ProcessName);
+            OnPropertyChanged(nameof(Icon));
+        }
+        OnPropertyChanged(nameof(PeakLevel));
     }
 
     public ICommand ToggleMuteCommand { get; }
@@ -105,7 +120,7 @@ public class AudioSessionItem : ViewModelBase
     public ICommand MoveToMediaCommand { get; }
     public ICommand MoveToAuxCommand { get; }
 
-    public AudioSessionItem(IAudioSession? session, string fallbackName = "System Sounds", string pillColor = "#10B981", string initialChannel = "Game", Action<AudioSessionItem, string>? onRouteToChannel = null)
+    public AudioSessionItem(IAudioSession? session, string fallbackName = "System Sounds", string pillColor = "#10B981", string initialChannel = "Game", Action<AudioSessionItem, string>? onRouteToChannel = null, Action<AudioSessionItem>? onAppSettingChanged = null)
     {
         _session = session;
         DisplayName = session?.DisplayName ?? fallbackName;
@@ -113,7 +128,8 @@ public class AudioSessionItem : ViewModelBase
         _pillColorHex = pillColor;
         _assignedChannel = initialChannel;
         _isMuted = session?.IsMuted ?? false;
-        _volume = session != null ? session.Volume * 100f : 100f;
+        _volume = 100f;
+        OnAppSettingChanged = onAppSettingChanged;
         ToggleMuteCommand = new RelayCommand(() => IsMuted = !IsMuted);
 
         MoveToGameCommand = new RelayCommand(() => onRouteToChannel?.Invoke(this, "Game Channel"));
@@ -872,6 +888,7 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
                     _audioEngine.DefaultRecordingDevice.MasterVolume = Math.Clamp(vol / 100f, 0f, 1f);
                 }
 
+                ApplyCompoundVolumesAndMutes();
                 NotifyHeroPropertiesChanged();
                 SaveState();
             };
@@ -891,6 +908,8 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
                     _audioEngine.DefaultRecordingDevice.IsMuted = muted;
                 }
 
+                ApplyCompoundVolumesAndMutes();
+                NotifyHeroPropertiesChanged();
                 SaveState();
             };
 
@@ -972,6 +991,7 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             micCh.Volume = 85;
             foreach (var ch in Channels) ch.IsMuted = false;
             ChatMixValue = 0.0;
+            ApplyCompoundVolumesAndMutes();
             SaveState();
         });
 
@@ -994,6 +1014,7 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         {
             bool anyUnmuted = Channels.Any(c => !c.IsMuted);
             foreach (var c in Channels) c.IsMuted = anyUnmuted;
+            ApplyCompoundVolumesAndMutes();
             SaveState();
         });
 
@@ -1131,6 +1152,7 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
     {
         _audioEngine.BusManager.ChatMixValue = _chatMixValue;
         ApplyChatMixToEndpoints();
+        ApplyCompoundVolumesAndMutes();
         OnPropertyChanged(nameof(ChatMixBalanceText));
         OnPropertyChanged(nameof(ChatMixSliderValue));
         SaveState();
@@ -1158,13 +1180,67 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void ReapplyAllSessionVolumes()
+    public static string GetProcessFamily(string processName)
     {
-        foreach (var ch in Channels)
+        if (string.IsNullOrWhiteSpace(processName)) return string.Empty;
+        string lower = processName.ToLowerInvariant().Replace(".exe", "").Trim();
+        if (lower.StartsWith("steam")) return "steam";
+        if (lower.StartsWith("discord")) return "discord";
+        if (lower.StartsWith("chrome")) return "chrome";
+        if (lower.StartsWith("msedge")) return "msedge";
+        if (lower.StartsWith("spotify")) return "spotify";
+        if (lower.StartsWith("firefox")) return "firefox";
+        if (lower.StartsWith("brave")) return "brave";
+        if (lower.StartsWith("opera")) return "opera";
+        if (lower.StartsWith("wallpaper")) return "wallpaper";
+        return lower;
+    }
+
+    public void ApplyCompoundVolumesAndMutes()
+    {
+        float masterVolFactor = Channels.Count > 0 ? Math.Clamp(Channels[0].Volume / 100f, 0f, 1f) : 1f;
+        bool masterMuted = Channels.Count > 0 && Channels[0].IsMuted;
+
+        float gameFactor = _audioEngine.BusManager.GameChatMixMultiplier;
+        float chatFactor = _audioEngine.BusManager.ChatChatMixMultiplier;
+
+        var allActive = _audioEngine.ActiveSessions;
+
+        for (int i = 1; i < Channels.Count; i++)
         {
+            var ch = Channels[i];
+            float chVolFactor = Math.Clamp(ch.Volume / 100f, 0f, 1f);
+            bool chMuted = ch.IsMuted;
+
+            float busMultiplier = ch.ChannelType switch
+            {
+                SonarChannelType.Game => gameFactor,
+                SonarChannelType.Chat => chatFactor,
+                _ => 1f
+            };
+
             foreach (var app in ch.AssignedApps)
             {
-                _audioEngine.SetSessionVolume(app.ProcessId, app.Volume / 100f);
+                float appFactor = Math.Clamp(app.Volume / 100f, 0f, 1f);
+                float compoundVolume = masterVolFactor * chVolFactor * appFactor * busMultiplier;
+                bool compoundMute = masterMuted || chMuted || app.IsMuted;
+
+                _audioEngine.SetSessionVolume(app.ProcessId, compoundVolume);
+                _audioEngine.SetSessionMute(app.ProcessId, compoundMute);
+
+                // Also apply to any child/sibling sessions in the same process family
+                string family = GetProcessFamily(app.ProcessName);
+                if (!string.IsNullOrEmpty(family))
+                {
+                    foreach (var s in allActive)
+                    {
+                        if (s.ProcessId != app.ProcessId && GetProcessFamily(s.ProcessName) == family)
+                        {
+                            _audioEngine.SetSessionVolume(s.ProcessId, compoundVolume);
+                            _audioEngine.SetSessionMute(s.ProcessId, compoundMute);
+                        }
+                    }
+                }
             }
         }
     }
@@ -1281,6 +1357,43 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         channel.PeakLevelRight = right > channel.PeakLevelRight ? right : Math.Max(0.0, channel.PeakLevelRight * 0.85);
     }
 
+    private string GetChannelForSession(IAudioSession s)
+    {
+        string rawName = s.ProcessName.ToLowerInvariant().Replace(".exe", "").Trim();
+        string family = GetProcessFamily(s.ProcessName);
+
+        // 1. Direct process name match
+        if (_processRoutingMap.TryGetValue(s.ProcessName, out var savedTarget) && !string.IsNullOrWhiteSpace(savedTarget))
+        {
+            return savedTarget;
+        }
+
+        // 2. Process family match (e.g. steamwebhelper inherits steam's channel)
+        if (!string.IsNullOrEmpty(family) && _processRoutingMap.TryGetValue(family, out var familyTarget) && !string.IsNullOrWhiteSpace(familyTarget))
+        {
+            return familyTarget;
+        }
+
+        // 3. Category defaults
+        if (family == "discord" || rawName.Contains("teams") || rawName.Contains("zoom") || rawName.Contains("skype") || rawName.Contains("slack"))
+        {
+            return "Chat Channel";
+        }
+
+        if (family == "spotify" || family == "chrome" || family == "msedge" || family == "firefox" || family == "brave" || family == "opera" || rawName.Contains("vlc"))
+        {
+            return "Media Channel";
+        }
+
+        if (family == "wallpaper" || rawName.Contains("system"))
+        {
+            return "Aux Channel";
+        }
+
+        // Default: Games, Steam, and all gaming clients
+        return "Game Channel";
+    }
+
     public async Task RefreshAsync()
     {
         try
@@ -1299,57 +1412,48 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
             foreach (var s in sessions)
             {
-                string name = s.ProcessName.ToLowerInvariant();
-                string channelTarget = "Game Channel";
+                string channelTarget = GetChannelForSession(s);
                 string pillColor = "#10B981";
-
-                if (_processRoutingMap.TryGetValue(s.ProcessName, out var savedTarget))
-                {
-                    channelTarget = savedTarget;
-                }
-                else if (name.Contains("discord") || name.Contains("teams") || name.Contains("zoom") || name.Contains("skype"))
-                {
-                    channelTarget = "Chat Channel";
-                }
-                else if (name.Contains("spotify") || name.Contains("chrome") || name.Contains("vlc") || name.Contains("msedge") || name.Contains("firefox"))
-                {
-                    channelTarget = "Media Channel";
-                }
-                else if (name.Contains("system") || name.Contains("wallpaper") || name.Contains("steam"))
-                {
-                    channelTarget = "Aux Channel";
-                }
 
                 if (channelTarget.StartsWith("Chat", StringComparison.OrdinalIgnoreCase))
                 {
                     pillColor = "#00B4D8";
-                    chatSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Chat", (item, target) => AssignSessionToChannel(item, target)));
+                    chatSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Chat", 
+                        (item, target) => AssignSessionToChannel(item, target),
+                        _ => ApplyCompoundVolumesAndMutes()));
                 }
                 else if (channelTarget.StartsWith("Media", StringComparison.OrdinalIgnoreCase))
                 {
                     pillColor = "#EC4899";
-                    mediaSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Media", (item, target) => AssignSessionToChannel(item, target)));
+                    mediaSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Media", 
+                        (item, target) => AssignSessionToChannel(item, target),
+                        _ => ApplyCompoundVolumesAndMutes()));
                 }
                 else if (channelTarget.StartsWith("Aux", StringComparison.OrdinalIgnoreCase))
                 {
                     pillColor = "#A855F7";
-                    auxSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Aux", (item, target) => AssignSessionToChannel(item, target)));
+                    auxSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Aux", 
+                        (item, target) => AssignSessionToChannel(item, target),
+                        _ => ApplyCompoundVolumesAndMutes()));
                 }
                 else
                 {
                     pillColor = "#10B981";
-                    gameSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Game", (item, target) => AssignSessionToChannel(item, target)));
+                    gameSessions.Add(new AudioSessionItem(s, s.DisplayName, pillColor, "Game", 
+                        (item, target) => AssignSessionToChannel(item, target),
+                        _ => ApplyCompoundVolumesAndMutes()));
                 }
 
                 routingList.Add(new AppRoutingItem(s, s.DisplayName, channelTarget, "IconAudio", pillColor));
             }
 
-            SyncCollection(Channels[1].AssignedApps, gameSessions);
-            SyncCollection(Channels[2].AssignedApps, chatSessions);
-            SyncCollection(Channels[3].AssignedApps, mediaSessions);
-            SyncCollection(Channels[4].AssignedApps, auxSessions);
+            SyncSessionCollection(Channels[1].AssignedApps, gameSessions);
+            SyncSessionCollection(Channels[2].AssignedApps, chatSessions);
+            SyncSessionCollection(Channels[3].AssignedApps, mediaSessions);
+            SyncSessionCollection(Channels[4].AssignedApps, auxSessions);
             SyncCollection(AppRoutings, routingList);
 
+            ApplyCompoundVolumesAndMutes();
             NotifyHeroPropertiesChanged();
         }
         catch { }
@@ -1386,9 +1490,23 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
     private void RouteChannelAppsToDevice(SonarChannelStripItem ch, string deviceId)
     {
         if (string.IsNullOrEmpty(deviceId)) return;
+        var allActive = _audioEngine.ActiveSessions;
+
         foreach (var app in ch.AssignedApps)
         {
             _ = _audioEngine.RoutingService.SetAppOutputDeviceAsync(app.ProcessId, deviceId);
+
+            string family = GetProcessFamily(app.ProcessName);
+            if (!string.IsNullOrEmpty(family))
+            {
+                foreach (var s in allActive)
+                {
+                    if (s.ProcessId != app.ProcessId && GetProcessFamily(s.ProcessName) == family)
+                    {
+                        _ = _audioEngine.RoutingService.SetAppOutputDeviceAsync(s.ProcessId, deviceId);
+                    }
+                }
+            }
         }
     }
 
@@ -1702,6 +1820,16 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
         session.AssignedChannel = cleanTarget;
         _processRoutingMap[session.ProcessName] = cleanTarget;
+        string family = GetProcessFamily(session.ProcessName);
+        if (!string.IsNullOrEmpty(family))
+        {
+            _processRoutingMap[family] = cleanTarget;
+            if (family.Equals("steam", StringComparison.OrdinalIgnoreCase))
+            {
+                _processRoutingMap["steam"] = cleanTarget;
+                _processRoutingMap["steamwebhelper"] = cleanTarget;
+            }
+        }
 
         SonarBusType busType = cleanTarget switch
         {
@@ -1742,9 +1870,46 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         if (targetStrip?.SelectedDevice != null && !string.IsNullOrEmpty(targetStrip.SelectedDevice.Id))
         {
             _ = _audioEngine.RoutingService.SetAppOutputDeviceAsync(session.ProcessId, targetStrip.SelectedDevice.Id);
+
+            foreach (var activeSession in _audioEngine.ActiveSessions)
+            {
+                if (activeSession.ProcessId != session.ProcessId && GetProcessFamily(activeSession.ProcessName) == family)
+                {
+                    _ = _audioEngine.RoutingService.SetAppOutputDeviceAsync(activeSession.ProcessId, targetStrip.SelectedDevice.Id);
+                }
+            }
         }
 
+        ApplyCompoundVolumesAndMutes();
         SaveState();
+    }
+
+    private void SyncSessionCollection(ObservableCollection<AudioSessionItem> target, List<AudioSessionItem> incoming)
+    {
+        var incomingPids = new HashSet<int>(incoming.Select(i => i.ProcessId));
+        for (int i = target.Count - 1; i >= 0; i--)
+        {
+            if (!incomingPids.Contains(target[i].ProcessId))
+            {
+                target.RemoveAt(i);
+            }
+        }
+
+        foreach (var inc in incoming)
+        {
+            var existing = target.FirstOrDefault(t => t.ProcessId == inc.ProcessId);
+            if (existing != null)
+            {
+                if (inc.Session != null)
+                {
+                    existing.UpdateLiveMetrics(inc.Session);
+                }
+            }
+            else
+            {
+                target.Add(inc);
+            }
+        }
     }
 
     private static void SyncCollection<T>(ObservableCollection<T> target, List<T> source)
@@ -1818,6 +1983,17 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
                 foreach (var kvp in state.ProcessRoutingMap)
                 {
                     _processRoutingMap[kvp.Key] = kvp.Value;
+                    string fam = GetProcessFamily(kvp.Key);
+                    if (!string.IsNullOrEmpty(fam))
+                    {
+                        _processRoutingMap[fam] = kvp.Value;
+                        if (fam.Equals("steam", StringComparison.OrdinalIgnoreCase))
+                        {
+                            _processRoutingMap["steam"] = kvp.Value;
+                            _processRoutingMap["steamwebhelper"] = kvp.Value;
+                        }
+                    }
+
                     SonarBusType bType = kvp.Value switch
                     {
                         var t when t.StartsWith("Game", StringComparison.OrdinalIgnoreCase) => SonarBusType.Game,
@@ -1827,6 +2003,10 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
                         _ => SonarBusType.Game
                     };
                     _audioEngine.BusManager.AssignProcessNameToBus(kvp.Key, bType);
+                    if (!string.IsNullOrEmpty(fam))
+                    {
+                        _audioEngine.BusManager.AssignProcessNameToBus(fam, bType);
+                    }
                 }
             }
 

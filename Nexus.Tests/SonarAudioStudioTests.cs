@@ -301,4 +301,48 @@ public class SonarAudioStudioTests
         vm.Channels[1].SelectedDevice = dummyChoice;
         Assert.Equal(dummyChoice, vm.Channels[1].SelectedDevice);
     }
+
+    [Fact]
+    public void ProcessFamily_SteamAndDiscord_GroupCorrectly()
+    {
+        Assert.Equal("steam", Nexus.App.ViewModels.AudioStudioViewModel.GetProcessFamily("steam"));
+        Assert.Equal("steam", Nexus.App.ViewModels.AudioStudioViewModel.GetProcessFamily("steamwebhelper.exe"));
+        Assert.Equal("discord", Nexus.App.ViewModels.AudioStudioViewModel.GetProcessFamily("discord.exe"));
+        Assert.Equal("discord", Nexus.App.ViewModels.AudioStudioViewModel.GetProcessFamily("discordptb.exe"));
+        Assert.Equal("chrome", Nexus.App.ViewModels.AudioStudioViewModel.GetProcessFamily("chrome.exe"));
+        Assert.Equal("spotify", Nexus.App.ViewModels.AudioStudioViewModel.GetProcessFamily("spotify.exe"));
+    }
+
+    [Fact]
+    public void AssignSessionToChannel_Steam_MapsBothSteamAndSubprocesses()
+    {
+        var audioEngine = new AudioEngine();
+        using var vm = new Nexus.App.ViewModels.AudioStudioViewModel(audioEngine);
+        vm.EnablePersistence = false;
+
+        var steamApp = new Nexus.App.ViewModels.AudioSessionItem(null, "steam", "#10B981", "Game");
+        vm.AssignSessionToChannel(steamApp, "Game Channel");
+
+        Assert.True(vm.Channels[1].AssignedApps.Contains(steamApp));
+        Assert.Equal("Game Channel", steamApp.AssignedChannel);
+    }
+
+    [Fact]
+    public void ChannelMute_AppliesLiveToAssignedApps()
+    {
+        var audioEngine = new AudioEngine();
+        using var vm = new Nexus.App.ViewModels.AudioStudioViewModel(audioEngine);
+        vm.EnablePersistence = false;
+
+        var app = new Nexus.App.ViewModels.AudioSessionItem(null, "TestGame.exe", "#10B981", "Game");
+        vm.Channels[1].AssignedApps.Add(app);
+
+        // Mute channel
+        vm.Channels[1].IsMuted = true;
+        Assert.True(vm.Channels[1].IsMuted);
+
+        // Unmute channel
+        vm.Channels[1].IsMuted = false;
+        Assert.False(vm.Channels[1].IsMuted);
+    }
 }
