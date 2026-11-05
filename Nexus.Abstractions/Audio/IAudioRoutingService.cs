@@ -8,4 +8,5 @@ public interface IAudioRoutingService
     Task<bool> SetAppOutputDeviceAsync(int processId, string endpointDeviceId);
     Task<string?> GetAppOutputDeviceAsync(int processId);
     Task<bool> ResetAppRoutingAsync(int processId);
+    Task<bool> SetDefaultPlaybackDeviceAsync(string deviceId);
 }

@@ -258,4 +258,29 @@ public class AudioRoutingService : IAudioRoutingService
     {
         return SetAppOutputDeviceAsync(processId, null);
     }
+
+    public Task<bool> SetDefaultPlaybackDeviceAsync(string deviceId)
+    {
+        if (string.IsNullOrWhiteSpace(deviceId)) return Task.FromResult(false);
+
+        return Task.Run(() =>
+        {
+            try
+            {
+                var policyConfig = (IPolicyConfigVista)new PolicyConfigVistaClient();
+                string cleanId = UnpackDeviceId(deviceId);
+                int hr1 = policyConfig.SetDefaultEndpoint(cleanId, ERole.eConsole);
+                int hr2 = policyConfig.SetDefaultEndpoint(cleanId, ERole.eMultimedia);
+                int hr3 = policyConfig.SetDefaultEndpoint(cleanId, ERole.eCommunications);
+                bool success = hr1 >= 0 || hr2 >= 0;
+                _logger?.LogInformation("SetDefaultPlaybackDevice {DeviceId} -> hr1=0x{Hr1:X8}, hr2=0x{Hr2:X8}, hr3=0x{Hr3:X8}", cleanId, hr1, hr2, hr3);
+                return success;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to set default playback endpoint {DeviceId}", deviceId);
+                return false;
+            }
+        });
+    }
 }

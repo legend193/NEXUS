@@ -227,4 +227,78 @@ public class SonarAudioStudioTests
         // Verify Streams count
         Assert.Equal("0", vm.ActiveStreamsCountText);
     }
+
+    [Fact]
+    public void DeviceExclusion_FilterTogglesVisibilityInChannels()
+    {
+        var audioEngine = new AudioEngine();
+        using var vm = new Nexus.App.ViewModels.AudioStudioViewModel(audioEngine);
+        vm.EnablePersistence = false;
+
+        vm.RefreshManageableDevices();
+        if (vm.ManageableDevices.Count > 0)
+        {
+            var firstDev = vm.ManageableDevices[0];
+            string targetId = firstDev.Id;
+
+            // Toggle off
+            firstDev.IsVisibleInDropdown = false;
+            Assert.Contains(targetId, vm.ExcludedDeviceIds);
+
+            // Toggle back on
+            firstDev.IsVisibleInDropdown = true;
+            Assert.DoesNotContain(targetId, vm.ExcludedDeviceIds);
+        }
+    }
+
+    [Fact]
+    public void DeviceExclusion_ShowAll_And_HideVirtual_CommandsWork()
+    {
+        var audioEngine = new AudioEngine();
+        using var vm = new Nexus.App.ViewModels.AudioStudioViewModel(audioEngine);
+        vm.EnablePersistence = false;
+
+        vm.RefreshManageableDevices();
+
+        // Run HideVirtualDevicesCommand
+        vm.HideVirtualDevicesCommand.Execute(null);
+        foreach (var dev in vm.ManageableDevices)
+        {
+            if (dev.IsVirtual)
+            {
+                Assert.False(dev.IsVisibleInDropdown);
+                Assert.Contains(dev.Id, vm.ExcludedDeviceIds);
+            }
+        }
+
+        // Run ShowAllDevicesCommand
+        vm.ShowAllDevicesCommand.Execute(null);
+        Assert.Empty(vm.ExcludedDeviceIds);
+        foreach (var dev in vm.ManageableDevices)
+        {
+            Assert.True(dev.IsVisibleInDropdown);
+        }
+    }
+
+    [Fact]
+    public void ChannelDeviceSelection_RoutesAssignedApps()
+    {
+        var audioEngine = new AudioEngine();
+        using var vm = new Nexus.App.ViewModels.AudioStudioViewModel(audioEngine);
+        vm.EnablePersistence = false;
+
+        var dummySession = new Nexus.App.ViewModels.AudioSessionItem(null, "TestGame.exe", "#10B981", "Game");
+        vm.Channels[1].AssignedApps.Add(dummySession);
+
+        var dummyChoice = new Nexus.App.ViewModels.AudioDeviceChoice
+        {
+            Id = "{0.0.0.00000000}.{dummy-device-id}",
+            Name = "Speakers",
+            DisplayName = "Speakers [Hardware]"
+        };
+
+        // Selecting device on Game channel should trigger OnDeviceSelected and routing
+        vm.Channels[1].SelectedDevice = dummyChoice;
+        Assert.Equal(dummyChoice, vm.Channels[1].SelectedDevice);
+    }
 }

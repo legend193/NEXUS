@@ -58,4 +58,7 @@ public class AudioPersistentState
 
     // Process Routing Map (ProcessName -> ChannelName)
     public Dictionary<string, string> ProcessRoutingMap { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    // Excluded / Hidden Device IDs
+    public List<string> ExcludedDeviceIds { get; set; } = new();
 }

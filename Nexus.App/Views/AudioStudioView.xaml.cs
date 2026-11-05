@@ -69,25 +69,25 @@ public partial class AudioStudioView : UserControl
         if (sender is FrameworkElement el && el.DataContext is AudioSessionItem session)
         {
             var cm = new ContextMenu();
-            var m1 = new MenuItem { Header = "نقل إلى قناة الألعاب (Game)" };
+            var m1 = new MenuItem { Header = "Move to Game Channel" };
             m1.Click += (_, _) => (DataContext as AudioStudioViewModel)?.AssignSessionToChannel(session, "Game Channel");
             cm.Items.Add(m1);
 
-            var m2 = new MenuItem { Header = "نقل إلى قناة المحادثات (Chat)" };
+            var m2 = new MenuItem { Header = "Move to Chat Channel" };
             m2.Click += (_, _) => (DataContext as AudioStudioViewModel)?.AssignSessionToChannel(session, "Chat Channel");
             cm.Items.Add(m2);
 
-            var m3 = new MenuItem { Header = "نقل إلى قناة الوسائط (Media)" };
+            var m3 = new MenuItem { Header = "Move to Media Channel" };
             m3.Click += (_, _) => (DataContext as AudioStudioViewModel)?.AssignSessionToChannel(session, "Media Channel");
             cm.Items.Add(m3);
 
-            var m4 = new MenuItem { Header = "نقل إلى القناة الإضافية (Aux)" };
+            var m4 = new MenuItem { Header = "Move to Aux Channel" };
             m4.Click += (_, _) => (DataContext as AudioStudioViewModel)?.AssignSessionToChannel(session, "Aux Channel");
             cm.Items.Add(m4);
 
             cm.Items.Add(new Separator());
 
-            var mMute = new MenuItem { Header = session.IsMuted ? "إلغاء كتم صوت التطبيق" : "كتم صوت التطبيق" };
+            var mMute = new MenuItem { Header = session.IsMuted ? "Unmute App" : "Mute App" };
             mMute.Click += (_, _) => session.IsMuted = !session.IsMuted;
             cm.Items.Add(mMute);
 

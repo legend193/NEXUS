@@ -10,6 +10,7 @@
              d:DataContext="{d:DesignInstance vm:AudioStudioViewModel}">
 
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <conv:IconKeyToGeometryConverter x:Key="IconKeyToGeometryConverter" />
         <conv:EqualityToVisibilityConverter x:Key="EqualityToVisibilityConverter" />
         <conv:EqualityToBooleanConverter x:Key="EqualityToBooleanConverter" />
@@ -17,6 +18,22 @@
 
         <Geometry x:Key="IconStar">M 12,2 L 15.09,8.26 L 22,9.27 L 17,14.14 L 18.18,21.02 L 12,17.77 L 5.82,21.02 L 7,14.14 L 2,9.27 L 8.91,8.26 Z</Geometry>
         <Geometry x:Key="IconSparkles">M 12,2 L 13.5,8.5 L 20,10 L 13.5,11.5 L 12,18 L 10.5,11.5 L 4,10 L 10.5,8.5 Z M 19,16 L 20,18.5 L 22.5,19.5 L 20,20.5 L 19,23 L 18,20.5 L 15.5,19.5 L 18,18.5 Z</Geometry>
+
+        <!-- Reusable ComboBox ItemTemplate for Audio Devices -->
+        <DataTemplate x:Key="SonarDeviceItemTemplate">
+            <Grid Margin="2,1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Path Grid.Column="0" Data="{StaticResource IconSpeaker}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding ShortName}" FontSize="11" Foreground="#F1F5F9" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <Border Grid.Column="2" CornerRadius="3" Padding="4,1" Margin="6,0,0,0" Background="#1E293B" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding TagText}" FontSize="7" FontWeight="Bold" Foreground="#94A3B8" />
+                </Border>
+            </Grid>
+        </DataTemplate>
 
         <!-- Navigation Pill RadioButton Style -->
         <Style x:Key="SonarNavTabStyle" TargetType="RadioButton">
@@ -85,7 +102,8 @@
         </Style>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,16,0">
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,16,0">
         <StackPanel Margin="0,0,0,24">
 
             <!-- 01 — Top Header: Title & Subtitle -->
@@ -215,6 +233,12 @@
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding OpenDeviceManagerCommand}" Margin="0,0,10,0" Padding="10,5" ToolTip="Select which audio devices appear in dropdown menus">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource IconSettings}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="Manage Devices" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
                                 <Ellipse Width="7" Height="7" Fill="#10B981" Margin="0,0,6,0" VerticalAlignment="Center" />
                                 <TextBlock Text="SteelSeries Sonar Matrix Engine Active" Style="{StaticResource TextSubtle}" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
                                 <Button Style="{StaticResource NexusPillButton}" Command="{Binding PopoutMixerCommand}" Padding="3" Background="Transparent" BorderThickness="0" ToolTip="Pop-out Window">
@@ -235,7 +259,7 @@
                             </Grid.ColumnDefinitions>
 
                             <!-- Channel 0: MASTER (Cyan/Blue #00D2FF) -->
-                            <Border Grid.Column="0" Background="{StaticResource CardBgBrush}" CornerRadius="12" Padding="12,14" Margin="0,0,4,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                            <Border Grid.Column="0" Background="{StaticResource CardBgBrush}" CornerRadius="12" Padding="10,12" Margin="0,0,3,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
                                 <Grid DataContext="{Binding Channels[0]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -243,35 +267,46 @@
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
                                     <!-- Top Header: Icon + MASTER -->
-                                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <Grid Grid.Row="0" Margin="0,0,0,8">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <Path Data="{StaticResource IconSpeaker}" Stroke="#00D2FF" StrokeThickness="1.5" Width="15" Height="15" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <Path Data="{StaticResource IconSpeaker}" Stroke="#00D2FF" StrokeThickness="1.5" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
                                             <TextBlock Text="MASTER" FontWeight="Bold" FontSize="12" Foreground="#00D2FF" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Grid>
 
-                                    <!-- Device Selector Dropdown -->
-                                    <Border Grid.Row="1" Margin="0,0,0,14">
-                                        <ComboBox Style="{StaticResource SonarDeviceComboBox}"
+                                    <!-- Device Selector Dropdown + Filter Button -->
+                                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0" Style="{StaticResource SonarDeviceComboBox}"
                                                   ItemsSource="{Binding AvailableDevices}"
                                                   SelectedItem="{Binding SelectedDevice}"
-                                                  DisplayMemberPath="DisplayName"
-                                                  ToolTip="Select hardware output device" />
-                                    </Border>
+                                                  ItemTemplate="{StaticResource SonarDeviceItemTemplate}"
+                                                  ToolTip="{Binding SelectedDevice.DisplayName}" />
+                                        <Button Grid.Column="1" Style="{StaticResource NexusPillButton}"
+                                                Command="{Binding DataContext.OpenDeviceManagerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                ToolTip="Manage visible devices"
+                                                Padding="5,4" Margin="4,0,0,0" Height="28" Width="28" Background="#0F131D" BorderBrush="#252D3F">
+                                            <Path Data="{StaticResource IconSettings}" Stroke="#64748B" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" />
+                                        </Button>
+                                    </Grid>
 
                                     <!-- Vertical Fader & Stereo VU Meter -->
-                                    <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,4,0,10">
+                                    <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,2,0,8">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="22" />
+                                            <ColumnDefinition Width="20" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
 
                                         <!-- dB Scale -->
-                                        <UniformGrid Grid.Column="0" Rows="7" Height="170" Margin="0,0,4,0">
+                                        <UniformGrid Grid.Column="0" Rows="7" Height="145" Margin="0,0,4,0">
                                             <TextBlock Text="+12" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                             <TextBlock Text="+6" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                             <TextBlock Text="0" FontSize="8" Foreground="#94A3B8" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
@@ -281,29 +316,39 @@
                                             <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                         </UniformGrid>
 
-                                        <!-- Slider Fader (Colored track via Foreground) -->
-                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#00D2FF" Height="170" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
+                                        <!-- Slider Fader -->
+                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#00D2FF" Height="145" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
 
                                         <!-- Stereo VU Meter -->
-                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="170" VerticalAlignment="Center" />
+                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="145" VerticalAlignment="Center" />
                                     </Grid>
 
                                     <!-- Volume Text & Decibels Display -->
-                                    <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,0,10">
+                                    <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,0,8">
                                         <TextBlock Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
                                         <TextBlock Text="{Binding DecibelsDisplay}" FontSize="9" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,1,0,0" />
                                     </StackPanel>
 
                                     <!-- Dual Hardware Buttons: Mute & Solo -->
-                                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
                                         <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,6,0" ToolTip="Mute Channel" />
                                         <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="Solo Channel" />
                                     </StackPanel>
+
+                                    <!-- Apps to be routed / MAIN MIX OUT Box -->
+                                    <Border Grid.Row="5" Background="#0A0E17" CornerRadius="8" Padding="6" MinHeight="105" MaxHeight="120" BorderBrush="#1E293B" BorderThickness="1">
+                                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <Path Data="{StaticResource IconSpeaker}" Stroke="#00D2FF" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" Margin="0,0,0,4" HorizontalAlignment="Center" />
+                                            <TextBlock Text="Apps to be routed" FontWeight="Bold" FontSize="10" Foreground="#00D2FF" HorizontalAlignment="Center" />
+                                            <TextBlock Text="MAIN MIX OUT" FontSize="8" FontWeight="SemiBold" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                    </Border>
                                 </Grid>
                             </Border>
 
                             <!-- Channel 1: GAME (Emerald #10B981) -->
-                            <Border Grid.Column="1" Background="{StaticResource CardBgBrush}" CornerRadius="12" Padding="12,14" Margin="3,0,3,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                            <Border Grid.Column="1" Background="{StaticResource CardBgBrush}" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                                    AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Game Channel">
                                 <Grid DataContext="{Binding Channels[1]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -311,31 +356,44 @@
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <Grid Grid.Row="0" Margin="0,0,0,8">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <Path Data="{StaticResource IconGameController}" Stroke="#10B981" StrokeThickness="1.5" Width="15" Height="15" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <Path Data="{StaticResource IconGameController}" Stroke="#10B981" StrokeThickness="1.5" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
                                             <TextBlock Text="GAME" FontWeight="Bold" FontSize="12" Foreground="#10B981" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Grid>
 
-                                    <Border Grid.Row="1" Margin="0,0,0,14">
-                                        <ComboBox Style="{StaticResource SonarDeviceComboBox}"
+                                    <!-- Device Selector Dropdown + Filter Button -->
+                                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0" Style="{StaticResource SonarDeviceComboBox}"
                                                   ItemsSource="{Binding AvailableDevices}"
                                                   SelectedItem="{Binding SelectedDevice}"
-                                                  DisplayMemberPath="DisplayName"
-                                                  ToolTip="Select game audio endpoint" />
-                                    </Border>
+                                                  ItemTemplate="{StaticResource SonarDeviceItemTemplate}"
+                                                  ToolTip="{Binding SelectedDevice.DisplayName}" />
+                                        <Button Grid.Column="1" Style="{StaticResource NexusPillButton}"
+                                                Command="{Binding DataContext.OpenDeviceManagerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                ToolTip="Manage visible devices"
+                                                Padding="5,4" Margin="4,0,0,0" Height="28" Width="28" Background="#0F131D" BorderBrush="#252D3F">
+                                            <Path Data="{StaticResource IconSettings}" Stroke="#64748B" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" />
+                                        </Button>
+                                    </Grid>
 
-                                    <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,4,0,10">
+                                    <!-- Vertical Fader & Stereo VU Meter -->
+                                    <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,2,0,8">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="22" />
+                                            <ColumnDefinition Width="20" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
 
-                                        <UniformGrid Grid.Column="0" Rows="7" Height="170" Margin="0,0,4,0">
+                                        <UniformGrid Grid.Column="0" Rows="7" Height="145" Margin="0,0,4,0">
                                             <TextBlock Text="+12" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                             <TextBlock Text="+6" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                             <TextBlock Text="0" FontSize="8" Foreground="#94A3B8" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
@@ -345,24 +403,63 @@
                                             <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                         </UniformGrid>
 
-                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#10B981" Height="170" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
-                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="170" VerticalAlignment="Center" />
+                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#10B981" Height="145" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
+                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="145" VerticalAlignment="Center" />
                                     </Grid>
 
-                                    <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,0,10">
+                                    <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,0,8">
                                         <TextBlock Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
                                         <TextBlock Text="{Binding DecibelsDisplay}" FontSize="9" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,1,0,0" />
                                     </StackPanel>
 
-                                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
                                         <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,6,0" ToolTip="Mute Channel" />
                                         <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="Solo Channel" />
                                     </StackPanel>
+
+                                    <!-- Apps Container Box with Drag & Drop -->
+                                    <Border Grid.Row="5" Background="#0A0E17" CornerRadius="8" Padding="6" MinHeight="105" MaxHeight="120"
+                                            BorderBrush="#1C382B" BorderThickness="1"
+                                            AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Game Channel">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Text="Apps" FontSize="9" FontWeight="SemiBold" Foreground="#10B981" Margin="2,0,0,4" />
+                                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                                <ItemsControl ItemsSource="{Binding AssignedApps}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border CornerRadius="5" Padding="5,3" Margin="0,0,0,3"
+                                                                    Background="#10251C" BorderBrush="{Binding PillColorHex}" BorderThickness="1"
+                                                                    ToolTip="{Binding DisplayName}" Cursor="Hand"
+                                                                    PreviewMouseLeftButtonDown="AppIcon_PreviewMouseLeftButtonDown"
+                                                                    MouseMove="AppIcon_MouseMove"
+                                                                    MouseRightButtonUp="AppIcon_MouseRightButtonUp">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <Image Grid.Column="0" Source="{Binding Icon}" Width="13" Height="13" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayNameUpper}"
+                                                                               FontSize="9" FontWeight="Bold" Foreground="#F1F5F9"
+                                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Border>
                                 </Grid>
                             </Border>
 
                             <!-- Channel 2: CHAT (Cyan #00B4D8) -->
-                            <Border Grid.Column="2" Background="{StaticResource CardBgBrush}" CornerRadius="12" Padding="12,14" Margin="3,0,3,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                            <Border Grid.Column="2" Background="{StaticResource CardBgBrush}" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                                    AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Chat Channel">
                                 <Grid DataContext="{Binding Channels[2]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -370,31 +467,44 @@
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <Grid Grid.Row="0" Margin="0,0,0,8">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <Path Data="{StaticResource IconChatBubble}" Stroke="#00B4D8" StrokeThickness="1.5" Width="15" Height="15" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <Path Data="{StaticResource IconChatBubble}" Stroke="#00B4D8" StrokeThickness="1.5" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
                                             <TextBlock Text="CHAT" FontWeight="Bold" FontSize="12" Foreground="#00B4D8" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Grid>
 
-                                    <Border Grid.Row="1" Margin="0,0,0,14">
-                                        <ComboBox Style="{StaticResource SonarDeviceComboBox}"
+                                    <!-- Device Selector Dropdown + Filter Button -->
+                                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0" Style="{StaticResource SonarDeviceComboBox}"
                                                   ItemsSource="{Binding AvailableDevices}"
                                                   SelectedItem="{Binding SelectedDevice}"
-                                                  DisplayMemberPath="DisplayName"
-                                                  ToolTip="Select chat audio endpoint" />
-                                    </Border>
+                                                  ItemTemplate="{StaticResource SonarDeviceItemTemplate}"
+                                                  ToolTip="{Binding SelectedDevice.DisplayName}" />
+                                        <Button Grid.Column="1" Style="{StaticResource NexusPillButton}"
+                                                Command="{Binding DataContext.OpenDeviceManagerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                ToolTip="Manage visible devices"
+                                                Padding="5,4" Margin="4,0,0,0" Height="28" Width="28" Background="#0F131D" BorderBrush="#252D3F">
+                                            <Path Data="{StaticResource IconSettings}" Stroke="#64748B" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" />
+                                        </Button>
+                                    </Grid>
 
-                                    <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,4,0,10">
+                                    <!-- Vertical Fader & Stereo VU Meter -->
+                                    <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,2,0,8">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="22" />
+                                            <ColumnDefinition Width="20" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
 
-                                        <UniformGrid Grid.Column="0" Rows="7" Height="170" Margin="0,0,4,0">
+                                        <UniformGrid Grid.Column="0" Rows="7" Height="145" Margin="0,0,4,0">
                                             <TextBlock Text="+12" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                             <TextBlock Text="+6" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                             <TextBlock Text="0" FontSize="8" Foreground="#94A3B8" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
@@ -404,24 +514,63 @@
                                             <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                         </UniformGrid>
 
-                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#00B4D8" Height="170" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
-                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="170" VerticalAlignment="Center" />
+                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#00B4D8" Height="145" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
+                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="145" VerticalAlignment="Center" />
                                     </Grid>
 
-                                    <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,0,10">
+                                    <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,0,8">
                                         <TextBlock Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
                                         <TextBlock Text="{Binding DecibelsDisplay}" FontSize="9" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,1,0,0" />
                                     </StackPanel>
 
-                                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
                                         <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,6,0" ToolTip="Mute Channel" />
                                         <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="Solo Channel" />
                                     </StackPanel>
+
+                                    <!-- Apps Container Box with Drag & Drop -->
+                                    <Border Grid.Row="5" Background="#0A0E17" CornerRadius="8" Padding="6" MinHeight="105" MaxHeight="120"
+                                            BorderBrush="#0E2A38" BorderThickness="1"
+                                            AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Chat Channel">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Text="Apps" FontSize="9" FontWeight="SemiBold" Foreground="#00B4D8" Margin="2,0,0,4" />
+                                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                                <ItemsControl ItemsSource="{Binding AssignedApps}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border CornerRadius="5" Padding="5,3" Margin="0,0,0,3"
+                                                                    Background="#0D212B" BorderBrush="{Binding PillColorHex}" BorderThickness="1"
+                                                                    ToolTip="{Binding DisplayName}" Cursor="Hand"
+                                                                    PreviewMouseLeftButtonDown="AppIcon_PreviewMouseLeftButtonDown"
+                                                                    MouseMove="AppIcon_MouseMove"
+                                                                    MouseRightButtonUp="AppIcon_MouseRightButtonUp">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <Image Grid.Column="0" Source="{Binding Icon}" Width="13" Height="13" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayNameUpper}"
+                                                                               FontSize="9" FontWeight="Bold" Foreground="#F1F5F9"
+                                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Border>
                                 </Grid>
                             </Border>
 
                             <!-- Channel 3: MEDIA (Rose/Pink #E11D48) -->
-                            <Border Grid.Column="3" Background="{StaticResource CardBgBrush}" CornerRadius="12" Padding="12,14" Margin="3,0,3,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                            <Border Grid.Column="3" Background="{StaticResource CardBgBrush}" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                                    AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Media Channel">
                                 <Grid DataContext="{Binding Channels[3]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -429,31 +578,44 @@
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <Grid Grid.Row="0" Margin="0,0,0,8">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                             <Path Data="{StaticResource IconMediaPlay}" Fill="#E11D48" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
                                             <TextBlock Text="MEDIA" FontWeight="Bold" FontSize="12" Foreground="#E11D48" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Grid>
 
-                                    <Border Grid.Row="1" Margin="0,0,0,14">
-                                        <ComboBox Style="{StaticResource SonarDeviceComboBox}"
+                                    <!-- Device Selector Dropdown + Filter Button -->
+                                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0" Style="{StaticResource SonarDeviceComboBox}"
                                                   ItemsSource="{Binding AvailableDevices}"
                                                   SelectedItem="{Binding SelectedDevice}"
-                                                  DisplayMemberPath="DisplayName"
-                                                  ToolTip="Select media playback device" />
-                                    </Border>
+                                                  ItemTemplate="{StaticResource SonarDeviceItemTemplate}"
+                                                  ToolTip="{Binding SelectedDevice.DisplayName}" />
+                                        <Button Grid.Column="1" Style="{StaticResource NexusPillButton}"
+                                                Command="{Binding DataContext.OpenDeviceManagerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                ToolTip="Manage visible devices"
+                                                Padding="5,4" Margin="4,0,0,0" Height="28" Width="28" Background="#0F131D" BorderBrush="#252D3F">
+                                            <Path Data="{StaticResource IconSettings}" Stroke="#64748B" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" />
+                                        </Button>
+                                    </Grid>
 
-                                    <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,4,0,10">
+                                    <!-- Vertical Fader & Stereo VU Meter -->
+                                    <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,2,0,8">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="22" />
+                                            <ColumnDefinition Width="20" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
 
-                                        <UniformGrid Grid.Column="0" Rows="7" Height="170" Margin="0,0,4,0">
+                                        <UniformGrid Grid.Column="0" Rows="7" Height="145" Margin="0,0,4,0">
                                             <TextBlock Text="+12" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                             <TextBlock Text="+6" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                             <TextBlock Text="0" FontSize="8" Foreground="#94A3B8" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
@@ -463,24 +625,63 @@
                                             <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                         </UniformGrid>
 
-                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#E11D48" Height="170" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
-                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="170" VerticalAlignment="Center" />
+                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#E11D48" Height="145" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
+                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="145" VerticalAlignment="Center" />
                                     </Grid>
 
-                                    <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,0,10">
+                                    <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,0,8">
                                         <TextBlock Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
                                         <TextBlock Text="{Binding DecibelsDisplay}" FontSize="9" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,1,0,0" />
                                     </StackPanel>
 
-                                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
                                         <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,6,0" ToolTip="Mute Channel" />
                                         <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="Solo Channel" />
                                     </StackPanel>
+
+                                    <!-- Apps Container Box with Drag & Drop -->
+                                    <Border Grid.Row="5" Background="#0A0E17" CornerRadius="8" Padding="6" MinHeight="105" MaxHeight="120"
+                                            BorderBrush="#381320" BorderThickness="1"
+                                            AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Media Channel">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Text="Apps" FontSize="9" FontWeight="SemiBold" Foreground="#E11D48" Margin="2,0,0,4" />
+                                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                                <ItemsControl ItemsSource="{Binding AssignedApps}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border CornerRadius="5" Padding="5,3" Margin="0,0,0,3"
+                                                                    Background="#2A0F1B" BorderBrush="{Binding PillColorHex}" BorderThickness="1"
+                                                                    ToolTip="{Binding DisplayName}" Cursor="Hand"
+                                                                    PreviewMouseLeftButtonDown="AppIcon_PreviewMouseLeftButtonDown"
+                                                                    MouseMove="AppIcon_MouseMove"
+                                                                    MouseRightButtonUp="AppIcon_MouseRightButtonUp">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <Image Grid.Column="0" Source="{Binding Icon}" Width="13" Height="13" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayNameUpper}"
+                                                                               FontSize="9" FontWeight="Bold" Foreground="#F1F5F9"
+                                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Border>
                                 </Grid>
                             </Border>
 
                             <!-- Channel 4: AUX (Purple #A855F7) -->
-                            <Border Grid.Column="4" Background="{StaticResource CardBgBrush}" CornerRadius="12" Padding="12,14" Margin="3,0,3,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                            <Border Grid.Column="4" Background="{StaticResource CardBgBrush}" CornerRadius="12" Padding="10,12" Margin="3,0,3,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                                    AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Aux Channel">
                                 <Grid DataContext="{Binding Channels[4]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -488,31 +689,44 @@
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <Grid Grid.Row="0" Margin="0,0,0,8">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <Path Data="{StaticResource IconAuxWaves}" Stroke="#A855F7" StrokeThickness="1.5" Width="15" Height="15" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <Path Data="{StaticResource IconAuxWaves}" Stroke="#A855F7" StrokeThickness="1.5" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
                                             <TextBlock Text="AUX" FontWeight="Bold" FontSize="12" Foreground="#A855F7" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Grid>
 
-                                    <Border Grid.Row="1" Margin="0,0,0,14">
-                                        <ComboBox Style="{StaticResource SonarDeviceComboBox}"
+                                    <!-- Device Selector Dropdown + Filter Button -->
+                                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0" Style="{StaticResource SonarDeviceComboBox}"
                                                   ItemsSource="{Binding AvailableDevices}"
                                                   SelectedItem="{Binding SelectedDevice}"
-                                                  DisplayMemberPath="DisplayName"
-                                                  ToolTip="Select aux output device" />
-                                    </Border>
+                                                  ItemTemplate="{StaticResource SonarDeviceItemTemplate}"
+                                                  ToolTip="{Binding SelectedDevice.DisplayName}" />
+                                        <Button Grid.Column="1" Style="{StaticResource NexusPillButton}"
+                                                Command="{Binding DataContext.OpenDeviceManagerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                ToolTip="Manage visible devices"
+                                                Padding="5,4" Margin="4,0,0,0" Height="28" Width="28" Background="#0F131D" BorderBrush="#252D3F">
+                                            <Path Data="{StaticResource IconSettings}" Stroke="#64748B" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" />
+                                        </Button>
+                                    </Grid>
 
-                                    <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,4,0,10">
+                                    <!-- Vertical Fader & Stereo VU Meter -->
+                                    <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,2,0,8">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="22" />
+                                            <ColumnDefinition Width="20" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
 
-                                        <UniformGrid Grid.Column="0" Rows="7" Height="170" Margin="0,0,4,0">
+                                        <UniformGrid Grid.Column="0" Rows="7" Height="145" Margin="0,0,4,0">
                                             <TextBlock Text="+12" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                             <TextBlock Text="+6" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                             <TextBlock Text="0" FontSize="8" Foreground="#94A3B8" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
@@ -522,24 +736,63 @@
                                             <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                         </UniformGrid>
 
-                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#A855F7" Height="170" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
-                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="170" VerticalAlignment="Center" />
+                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#A855F7" Height="145" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
+                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="145" VerticalAlignment="Center" />
                                     </Grid>
 
-                                    <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,0,10">
+                                    <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,0,8">
                                         <TextBlock Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
                                         <TextBlock Text="{Binding DecibelsDisplay}" FontSize="9" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,1,0,0" />
                                     </StackPanel>
 
-                                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
                                         <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,6,0" ToolTip="Mute Channel" />
                                         <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="Solo Channel" />
                                     </StackPanel>
+
+                                    <!-- Apps Container Box with Drag & Drop -->
+                                    <Border Grid.Row="5" Background="#0A0E17" CornerRadius="8" Padding="6" MinHeight="105" MaxHeight="120"
+                                            BorderBrush="#2D173E" BorderThickness="1"
+                                            AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Aux Channel">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Text="Apps" FontSize="9" FontWeight="SemiBold" Foreground="#A855F7" Margin="2,0,0,4" />
+                                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                                <ItemsControl ItemsSource="{Binding AssignedApps}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border CornerRadius="5" Padding="5,3" Margin="0,0,0,3"
+                                                                    Background="#221230" BorderBrush="{Binding PillColorHex}" BorderThickness="1"
+                                                                    ToolTip="{Binding DisplayName}" Cursor="Hand"
+                                                                    PreviewMouseLeftButtonDown="AppIcon_PreviewMouseLeftButtonDown"
+                                                                    MouseMove="AppIcon_MouseMove"
+                                                                    MouseRightButtonUp="AppIcon_MouseRightButtonUp">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <Image Grid.Column="0" Source="{Binding Icon}" Width="13" Height="13" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayNameUpper}"
+                                                                               FontSize="9" FontWeight="Bold" Foreground="#F1F5F9"
+                                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Border>
                                 </Grid>
                             </Border>
 
                             <!-- Channel 5: MIC (Amber #F59E0B) -->
-                            <Border Grid.Column="5" Background="{StaticResource CardBgBrush}" CornerRadius="12" Padding="12,14" Margin="4,0,0,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                            <Border Grid.Column="5" Background="{StaticResource CardBgBrush}" CornerRadius="12" Padding="10,12" Margin="3,0,0,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
+                                    AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Mic Channel">
                                 <Grid DataContext="{Binding Channels[5]}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -547,31 +800,44 @@
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
-                                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <Grid Grid.Row="0" Margin="0,0,0,8">
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <Path Data="{StaticResource IconMicrophone}" Stroke="#F59E0B" StrokeThickness="1.5" Width="15" Height="15" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <Path Data="{StaticResource IconMicrophone}" Stroke="#F59E0B" StrokeThickness="1.5" Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
                                             <TextBlock Text="MIC" FontWeight="Bold" FontSize="12" Foreground="#F59E0B" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Grid>
 
-                                    <Border Grid.Row="1" Margin="0,0,0,14">
-                                        <ComboBox Style="{StaticResource SonarDeviceComboBox}"
+                                    <!-- Device Selector Dropdown + Filter Button -->
+                                    <Grid Grid.Row="1" Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0" Style="{StaticResource SonarDeviceComboBox}"
                                                   ItemsSource="{Binding AvailableDevices}"
                                                   SelectedItem="{Binding SelectedDevice}"
-                                                  DisplayMemberPath="DisplayName"
-                                                  ToolTip="Select microphone input device" />
-                                    </Border>
+                                                  ItemTemplate="{StaticResource SonarDeviceItemTemplate}"
+                                                  ToolTip="{Binding SelectedDevice.DisplayName}" />
+                                        <Button Grid.Column="1" Style="{StaticResource NexusPillButton}"
+                                                Command="{Binding DataContext.OpenDeviceManagerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                ToolTip="Manage visible devices"
+                                                Padding="5,4" Margin="4,0,0,0" Height="28" Width="28" Background="#0F131D" BorderBrush="#252D3F">
+                                            <Path Data="{StaticResource IconSettings}" Stroke="#64748B" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" />
+                                        </Button>
+                                    </Grid>
 
-                                    <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,4,0,10">
+                                    <!-- Vertical Fader & Stereo VU Meter -->
+                                    <Grid Grid.Row="2" HorizontalAlignment="Center" Margin="0,2,0,8">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="22" />
+                                            <ColumnDefinition Width="20" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
 
-                                        <UniformGrid Grid.Column="0" Rows="7" Height="170" Margin="0,0,4,0">
+                                        <UniformGrid Grid.Column="0" Rows="7" Height="145" Margin="0,0,4,0">
                                             <TextBlock Text="+12" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                             <TextBlock Text="+6" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                             <TextBlock Text="0" FontSize="8" Foreground="#94A3B8" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
@@ -581,19 +847,57 @@
                                             <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                         </UniformGrid>
 
-                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#F59E0B" Height="170" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,6,0" />
-                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="170" VerticalAlignment="Center" />
+                                        <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#F59E0B" Height="145" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
+                                        <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="12" Height="145" VerticalAlignment="Center" />
                                     </Grid>
 
-                                    <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,0,10">
+                                    <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="0,0,0,8">
                                         <TextBlock Text="{Binding Volume, StringFormat={}{0:0}%}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Center" />
                                         <TextBlock Text="{Binding DecibelsDisplay}" FontSize="9" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,1,0,0" />
                                     </StackPanel>
 
-                                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
                                         <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,6,0" ToolTip="Mute Microphone" />
                                         <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="Solo Channel" />
                                     </StackPanel>
+
+                                    <!-- Apps Container Box with Drag & Drop -->
+                                    <Border Grid.Row="5" Background="#0A0E17" CornerRadius="8" Padding="6" MinHeight="105" MaxHeight="120"
+                                            BorderBrush="#3D2910" BorderThickness="1"
+                                            AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Mic Channel">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Text="Apps" FontSize="9" FontWeight="SemiBold" Foreground="#F59E0B" Margin="2,0,0,4" />
+                                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                                <ItemsControl ItemsSource="{Binding AssignedApps}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border CornerRadius="5" Padding="5,3" Margin="0,0,0,3"
+                                                                    Background="#23170B" BorderBrush="{Binding PillColorHex}" BorderThickness="1"
+                                                                    ToolTip="{Binding DisplayName}" Cursor="Hand"
+                                                                    PreviewMouseLeftButtonDown="AppIcon_PreviewMouseLeftButtonDown"
+                                                                    MouseMove="AppIcon_MouseMove"
+                                                                    MouseRightButtonUp="AppIcon_MouseRightButtonUp">
+                                                                <Grid>
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="Auto" />
+                                                                        <ColumnDefinition Width="*" />
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <Image Grid.Column="0" Source="{Binding Icon}" Width="13" Height="13" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                                                    <TextBlock Grid.Column="1" Text="{Binding DisplayNameUpper}"
+                                                                               FontSize="9" FontWeight="Bold" Foreground="#F1F5F9"
+                                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                                </Grid>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Grid>
+                                    </Border>
                                 </Grid>
                             </Border>
                         </Grid>
@@ -1177,4 +1481,115 @@
 
         </StackPanel>
     </ScrollViewer>
+
+    <!-- ========================================================================= -->
+    <!-- DEVICE VISIBILITY / EXCLUSION MANAGER MODAL OVERLAY                       -->
+    <!-- ========================================================================= -->
+    <Grid Visibility="{Binding IsDeviceManagerOpen, Converter={StaticResource BooleanToVisibilityConverter}}"
+          HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+          Panel.ZIndex="1000">
+        <!-- Semi-transparent backdrop with click-to-close -->
+        <Border Background="#D0050811">
+            <Border.InputBindings>
+                <MouseBinding MouseAction="LeftClick" Command="{Binding CloseDeviceManagerCommand}" />
+            </Border.InputBindings>
+        </Border>
+
+        <!-- Dialog Card -->
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                Width="540" MaxHeight="600"
+                Background="#0D111A"
+                BorderBrush="#252D3F"
+                BorderThickness="1"
+                CornerRadius="16"
+                Padding="22">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="30" ShadowDepth="4" Opacity="0.6" Color="#000000" />
+            </Border.Effect>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <Grid Grid.Row="0" Margin="0,0,0,16">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Width="34" Height="34" CornerRadius="10" Background="#14233D" Margin="0,0,12,0">
+                            <Path Data="{StaticResource IconSettings}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Manage Output Devices" FontWeight="Bold" FontSize="15" Foreground="{StaticResource TextPrimaryBrush}" />
+                            <TextBlock Text="Toggle which devices appear in channel dropdown selectors" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Button Style="{StaticResource NexusPillButton}" Command="{Binding CloseDeviceManagerCommand}"
+                            HorizontalAlignment="Right" VerticalAlignment="Top" Padding="6,4" Background="Transparent" BorderThickness="0" ToolTip="Close">
+                        <Path Data="{StaticResource IconClose}" Stroke="{StaticResource TextMutedBrush}" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" />
+                    </Button>
+                </Grid>
+
+                <!-- Action Bar -->
+                <Border Grid.Row="1" Background="#070A11" CornerRadius="8" Padding="10,7" Margin="0,0,0,12" BorderBrush="#1E293B" BorderThickness="1">
+                    <Grid>
+                        <TextBlock Text="{Binding VisibleDevicesSummary}" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding ShowAllDevicesCommand}" Content="Show All" FontSize="10" Padding="8,3" Margin="0,0,6,0" />
+                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding HideVirtualDevicesCommand}" Content="Hide Virtual" FontSize="10" Padding="8,3" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Scrollable Device Checklist -->
+                <ScrollViewer Grid.Row="2" MaxHeight="360" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,16">
+                    <ItemsControl ItemsSource="{Binding ManageableDevices}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#101522" BorderBrush="#1C2434" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Icon -->
+                                        <Path Grid.Column="0" Data="{StaticResource IconSpeaker}" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,10,0" />
+
+                                        <!-- Name and Subtitle -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Name}" FontSize="9" Foreground="#64748B" TextTrimming="CharacterEllipsis" Margin="0,1,0,0" />
+                                        </StackPanel>
+
+                                        <!-- Badge -->
+                                        <Border Grid.Column="2" Background="#1A2234" CornerRadius="4" Padding="5,2" Margin="0,0,12,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding DeviceTypeTag}" FontSize="8" FontWeight="Bold" Foreground="{Binding DeviceTypeColor}" />
+                                        </Border>
+
+                                        <!-- Toggle Switch -->
+                                        <CheckBox Grid.Column="3" IsChecked="{Binding IsVisibleInDropdown, Mode=TwoWay}"
+                                                  Style="{StaticResource NexusToggleSwitch}"
+                                                  VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Footer -->
+                <Grid Grid.Row="3">
+                    <TextBlock Text="Changes apply immediately to all channel dropdowns" FontSize="10" Foreground="#64748B" VerticalAlignment="Center" />
+                    <Button Style="{StaticResource NexusAccentButton}" Command="{Binding CloseDeviceManagerCommand}"
+                            Content="Done" FontWeight="SemiBold" FontSize="11" HorizontalAlignment="Right" Padding="20,6" />
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+    </Grid>
 </UserControl>

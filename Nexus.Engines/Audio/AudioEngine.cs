@@ -376,10 +376,13 @@ public class AudioEngine : IAudioEngine, IDisposable
         }
     }
 
-    public Task SetDefaultPlaybackDeviceAsync(string deviceId)
+    public async Task SetDefaultPlaybackDeviceAsync(string deviceId)
     {
         _logger?.LogInformation("Requested default playback device change to {DeviceId}", deviceId);
-        return Task.CompletedTask;
+        if (!string.IsNullOrWhiteSpace(deviceId))
+        {
+            await RoutingService.SetDefaultPlaybackDeviceAsync(deviceId);
+        }
     }
 
     public Task SetDefaultRecordingDeviceAsync(string deviceId)

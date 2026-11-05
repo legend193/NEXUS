@@ -138,3 +138,40 @@ public interface IMMDeviceEnumeratorCom
 public class MMDeviceEnumeratorComObject
 {
 }
+
+[ComImport]
+[Guid("f8679f50-850a-41cf-9c72-430f290290c8")]
+[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface IPolicyConfigVista
+{
+    [PreserveSig]
+    int GetMixFormat(string pwstrDeviceId, out IntPtr ppFormat);
+    [PreserveSig]
+    int GetDeviceFormat(string pwstrDeviceId, int bDefault, out IntPtr ppFormat);
+    [PreserveSig]
+    int ResetDeviceFormat(string pwstrDeviceId);
+    [PreserveSig]
+    int SetDeviceFormat(string pwstrDeviceId, IntPtr pEndpointFormat, IntPtr pMixFormat);
+    [PreserveSig]
+    int GetProcessingPeriod(string pwstrDeviceId, int bDefault, out long pmftDefaultPeriod, out long pmftMinimumPeriod);
+    [PreserveSig]
+    int SetProcessingPeriod(string pwstrDeviceId, ref long pmftPeriod);
+    [PreserveSig]
+    int GetShareMode(string pwstrDeviceId, out IntPtr pMode);
+    [PreserveSig]
+    int SetShareMode(string pwstrDeviceId, IntPtr mode);
+    [PreserveSig]
+    int GetPropertyValue(string pwstrDeviceId, IntPtr key, IntPtr pv);
+    [PreserveSig]
+    int SetPropertyValue(string pwstrDeviceId, IntPtr key, IntPtr pv);
+    [PreserveSig]
+    int SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string pwstrDeviceId, ERole role);
+    [PreserveSig]
+    int SetEndpointVisibility(string pwstrDeviceId, int bVisible);
+}
+
+[ComImport]
+[Guid("294fcb00-7887-47b8-b09f-0741ad31a563")]
+public class PolicyConfigVistaClient
+{
+}
