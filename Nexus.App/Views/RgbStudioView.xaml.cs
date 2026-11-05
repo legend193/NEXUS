@@ -102,25 +102,46 @@ public partial class RgbStudioView : UserControl
         }
         else if (e.PropertyName == nameof(RgbStudioViewModel.IsLcdCustomizerOpen))
         {
-            Dispatcher.Invoke(async () =>
+            Dispatcher.InvokeAsync(async () =>
             {
                 bool isModalOpen = _vm?.IsLcdCustomizerOpen == true;
-                if (_sharedRigWebView != null)
+                if (isModalOpen)
                 {
-                    _sharedRigWebView.Visibility = isModalOpen ? Visibility.Hidden : Visibility.Visible;
-                }
-                if (WebViewHostBorder != null)
-                {
-                    WebViewHostBorder.Visibility = isModalOpen ? Visibility.Collapsed : Visibility.Visible;
-                }
-                if (_sharedRigWebView?.CoreWebView2 != null && _isSharedWebViewInitialized)
-                {
-                    try
+                    // Airspace solution: Completely detach WebView2 from WPF visual tree while modal is active
+                    // so native Win32 HWND cannot paint over the modal dialog
+                    if (WebViewHostBorder != null && WebViewHostBorder.Child == _sharedRigWebView)
                     {
-                        string display = isModalOpen ? "none" : "block";
-                        await _sharedRigWebView.CoreWebView2.ExecuteScriptAsync($"document.body.style.display = '{display}';");
+                        WebViewHostBorder.Child = null;
                     }
-                    catch { }
+                    if (_sharedRigWebView != null)
+                    {
+                        _sharedRigWebView.Visibility = Visibility.Collapsed;
+                    }
+                }
+                else
+                {
+                    // Re-attach WebView2 to the host container when modal is dismissed
+                    if (_sharedRigWebView != null)
+                    {
+                        _sharedRigWebView.Visibility = Visibility.Visible;
+                        if (WebViewHostBorder != null && WebViewHostBorder.Child != _sharedRigWebView)
+                        {
+                            WebViewHostBorder.Child = _sharedRigWebView;
+                        }
+                        if (WebViewHostBorder != null)
+                        {
+                            WebViewHostBorder.Visibility = Visibility.Visible;
+                        }
+
+                        if (_sharedRigWebView.CoreWebView2 != null && _isSharedWebViewInitialized)
+                        {
+                            try
+                            {
+                                await _sharedRigWebView.CoreWebView2.ExecuteScriptAsync("document.body.style.display = 'block'; if (window.onWindowResize) window.onWindowResize(); window.dispatchEvent(new Event('resize'));");
+                            }
+                            catch { }
+                        }
+                    }
                 }
             });
         }

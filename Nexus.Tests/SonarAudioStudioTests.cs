@@ -167,4 +167,38 @@ public class SonarAudioStudioTests
         Assert.True(processed < loudSample);
         Assert.True(processed <= 1.0f);
     }
+
+    [Fact]
+    public void AudioRouting_GenerateAndUnpackDeviceId_RoundTripsCorrectly()
+    {
+        string rawId = "{0.0.0.00000000}.{C2116727-10E8-4D55-9414-49FC111C5D4A}";
+        string formatted = AudioRoutingService.GenerateDeviceId(rawId, Nexus.Engines.Audio.Interop.EDataFlow.eRender);
+
+        Assert.StartsWith(@"\\?\SWD#MMDEVAPI#", formatted);
+        Assert.EndsWith("#{e6327cad-dcec-4949-ae8a-991e976a79d2}", formatted);
+
+        string unpacked = AudioRoutingService.UnpackDeviceId(formatted);
+        Assert.Equal(rawId, unpacked);
+    }
+
+    [Fact]
+    public void AudioRouting_CaptureEndpoint_GeneratesCaptureSuffix()
+    {
+        string rawId = "{0.0.1.00000000}.{2303449B-C2A7-4680-A5BC-7EDF85FDDDAF}";
+        string formatted = AudioRoutingService.GenerateDeviceId(rawId, Nexus.Engines.Audio.Interop.EDataFlow.eCapture);
+
+        Assert.EndsWith("#{2eef81be-33fa-4800-9670-1cd474972c3f}", formatted);
+
+        string unpacked = AudioRoutingService.UnpackDeviceId(formatted);
+        Assert.Equal(rawId, unpacked);
+    }
+
+    [Fact]
+    public void AudioRouting_AlreadyFormattedToken_IsNotDuplicated()
+    {
+        string preformatted = @"\\?\SWD#MMDEVAPI#{0.0.0.00000000}.{GUID}#{e6327cad-dcec-4949-ae8a-991e976a79d2}";
+        string result = AudioRoutingService.GenerateDeviceId(preformatted);
+
+        Assert.Equal(preformatted, result);
+    }
 }

@@ -39,8 +39,8 @@
         <Grid Margin="16,12,16,14">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
@@ -103,82 +103,9 @@
             </Grid>
 
             <!-- ========================================================================= -->
-            <!-- ROW 1: CHATMIX DUAL-DECK CROSSFADER                                       -->
+            <!-- ROW 1: 6-CHANNEL MIXER RACK                                               -->
             <!-- ========================================================================= -->
-            <Border Grid.Row="1" Style="{StaticResource GlassCard}" Margin="0,0,0,12" Padding="14,10">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
-                    <Grid Grid.Row="0" Margin="0,0,0,8">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border Background="#10B981" Width="7" Height="7" CornerRadius="3.5" Margin="0,0,8,0" VerticalAlignment="Center" />
-                            <Path Data="{StaticResource IconGameController}" Stroke="#10B981" StrokeThickness="1.5" Width="14" Height="14" Stretch="Uniform" Margin="0,0,7,0" VerticalAlignment="Center" />
-                            <TextBlock Text="CHATMIX موازنة الألعاب والمحادثة" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
-                            <Border Background="#132B20" CornerRadius="4" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="HARDWARE CROSSFADE" FontSize="8" FontWeight="SemiBold" Foreground="#34D399" />
-                            </Border>
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="-1.0" Content="100% اللعبة" Margin="0,0,5,0" Height="24" Padding="8,0" FontSize="10" />
-                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="-0.5" Content="تركيز اللعبة (75/25)" Margin="0,0,5,0" Height="24" Padding="8,0" FontSize="10" />
-                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding ResetChatMixCommand}" Content="متوازن (50/50)" Margin="0,0,5,0" Height="24" Padding="8,0" FontSize="10" />
-                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="0.5" Content="تركيز المحادثة (25/75)" Margin="0,0,5,0" Height="24" Padding="8,0" FontSize="10" />
-                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="1.0" Content="100% المحادثة" Height="24" Padding="8,0" FontSize="10" />
-                        </StackPanel>
-                    </Grid>
-
-                    <Grid Grid.Row="1">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Game Audio Deck Tag -->
-                        <Border Grid.Column="0" Background="#11241C" CornerRadius="7" Padding="10,5" Margin="0,0,12,0" VerticalAlignment="Center" BorderBrush="#1C382B" BorderThickness="1">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Path Data="{StaticResource IconGameController}" Stroke="#10B981" StrokeThickness="1.5" Width="13" Height="13" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                <TextBlock Text="GAME" FontWeight="Bold" Foreground="#10B981" FontSize="11" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding Channels[1].Volume, StringFormat={}  {0:0}%}" FontWeight="SemiBold" Foreground="#34D399" FontSize="11" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Center Slider with Dual Gradient Track -->
-                        <Grid Grid.Column="1" VerticalAlignment="Center">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            
-                            <Slider Grid.Row="0" Style="{StaticResource SonarChatMixSlider}" Value="{Binding ChatMixSliderValue, Mode=TwoWay}" Minimum="-100" Maximum="100" VerticalAlignment="Center" />
-                            
-                            <Grid Grid.Row="1" Margin="2,3,2,0">
-                                <TextBlock Text="100% Game" FontSize="9" Foreground="#64748B" HorizontalAlignment="Left" />
-                                <TextBlock Text="{Binding ChatMixBalanceText}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" />
-                                <TextBlock Text="100% Chat" FontSize="9" Foreground="#64748B" HorizontalAlignment="Right" />
-                            </Grid>
-                        </Grid>
-
-                        <!-- Voice Chat Deck Tag -->
-                        <Border Grid.Column="2" Background="#102530" CornerRadius="7" Padding="10,5" Margin="12,0,0,0" VerticalAlignment="Center" BorderBrush="#163442" BorderThickness="1">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Channels[2].Volume, StringFormat={}{0:0}%  }" FontWeight="SemiBold" Foreground="#22D3EE" FontSize="11" VerticalAlignment="Center" />
-                                <TextBlock Text="CHAT" FontWeight="Bold" Foreground="#00B4D8" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                <Path Data="{StaticResource IconChatBubble}" Stroke="#00B4D8" StrokeThickness="1.5" Width="13" Height="13" Stretch="Uniform" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </Grid>
-            </Border>
-
-            <!-- ========================================================================= -->
-            <!-- ROW 2: 6-CHANNEL MIXER RACK                                               -->
-            <!-- ========================================================================= -->
-            <Border Grid.Row="2" Style="{StaticResource GlassCard}" Padding="14,12">
+            <Border Grid.Row="1" Style="{StaticResource GlassCard}" Padding="14,12" Margin="0,0,0,10">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -702,6 +629,77 @@
                             </Border>
                         </Grid>
                     </Border>
+                </Grid>
+            </Border>
+
+            <!-- ========================================================================= -->
+            <!-- ROW 2: COMPACT CHATMIX CROSSFADER                                         -->
+            <!-- ========================================================================= -->
+            <Border Grid.Row="2" Style="{StaticResource GlassCard}" Margin="0,0,0,8" Padding="12,8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="0,0,0,6">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Background="#10B981" Width="6" Height="6" CornerRadius="3" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <Path Data="{StaticResource IconGameController}" Stroke="#10B981" StrokeThickness="1.5" Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <TextBlock Text="CHATMIX موازنة الألعاب والمحادثة" FontWeight="Bold" FontSize="11" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                            <Border Background="#132B20" CornerRadius="3" Padding="5,2" Margin="6,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="HARDWARE CROSSFADE" FontSize="8" FontWeight="SemiBold" Foreground="#34D399" />
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="-1.0" Content="100% اللعبة" Margin="0,0,4,0" Height="22" Padding="7,0" FontSize="9" />
+                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding ResetChatMixCommand}" Content="متوازن (50/50)" Margin="0,0,4,0" Height="22" Padding="7,0" FontSize="9" />
+                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="1.0" Content="100% المحادثة" Height="22" Padding="7,0" FontSize="9" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Game Audio Deck Tag -->
+                        <Border Grid.Column="0" Background="#11241C" CornerRadius="6" Padding="8,4" Margin="0,0,10,0" VerticalAlignment="Center" BorderBrush="#1C382B" BorderThickness="1">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="{StaticResource IconGameController}" Stroke="#10B981" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                <TextBlock Text="GAME" FontWeight="Bold" Foreground="#10B981" FontSize="10" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Channels[1].Volume, StringFormat={}  {0:0}%}" FontWeight="SemiBold" Foreground="#34D399" FontSize="10" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Center Slider with Dual Gradient Track -->
+                        <Grid Grid.Column="1" VerticalAlignment="Center">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            
+                            <Slider Grid.Row="0" Style="{StaticResource SonarChatMixSlider}" Value="{Binding ChatMixSliderValue, Mode=TwoWay}" Minimum="-100" Maximum="100" VerticalAlignment="Center" Height="20" />
+                            
+                            <Grid Grid.Row="1" Margin="2,2,2,0">
+                                <TextBlock Text="100% Game" FontSize="8" Foreground="#64748B" HorizontalAlignment="Left" />
+                                <TextBlock Text="{Binding ChatMixBalanceText}" FontSize="9" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="100% Chat" FontSize="8" Foreground="#64748B" HorizontalAlignment="Right" />
+                            </Grid>
+                        </Grid>
+
+                        <!-- Voice Chat Deck Tag -->
+                        <Border Grid.Column="2" Background="#102530" CornerRadius="6" Padding="8,4" Margin="10,0,0,0" VerticalAlignment="Center" BorderBrush="#163442" BorderThickness="1">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Channels[2].Volume, StringFormat={}{0:0}%  }" FontWeight="SemiBold" Foreground="#22D3EE" FontSize="10" VerticalAlignment="Center" />
+                                <TextBlock Text="CHAT" FontWeight="Bold" Foreground="#00B4D8" FontSize="10" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                <Path Data="{StaticResource IconChatBubble}" Stroke="#00B4D8" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </Grid>
             </Border>
 

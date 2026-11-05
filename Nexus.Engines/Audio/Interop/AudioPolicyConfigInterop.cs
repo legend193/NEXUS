@@ -26,97 +26,82 @@ public static class CombaseNativeMethods
         [Out, MarshalAs(UnmanagedType.IInspectable)] out object factory);
 
     [DllImport("combase.dll", PreserveSig = false)]
-    public static extern IntPtr WindowsCreateString(
+    public static extern int WindowsCreateString(
         [MarshalAs(UnmanagedType.LPWStr)] string sourceString,
-        int length);
+        uint length,
+        out IntPtr hstring);
 
     [DllImport("combase.dll", PreserveSig = false)]
     public static extern void WindowsDeleteString(IntPtr hstring);
 }
 
-// Windows 10 (1809 - 21H2) and Windows 11
+// Windows 11 / Windows 10 21H2 and newer (EarTrumpet reference implementation)
 [ComImport]
-[Guid("ab653000-8411-4944-b870-78904e85d95b")]
+[Guid("ab3d4648-e242-459f-b02f-541c70306324")]
 [InterfaceType(ComInterfaceType.InterfaceIsIInspectable)]
-public interface IAudioPolicyConfigFactory_Win10_1809
+public interface IAudioPolicyConfigFactoryVariantFor21H2
 {
-    int __vfptr0();
-    int __vfptr1();
-    int __vfptr2();
-    int __vfptr3();
-    int __vfptr4();
-    int __vfptr5();
-    int __vfptr6();
-    int __vfptr7();
-    int __vfptr8();
-    int __vfptr9();
+    int __incomplete__add_CtxVolumeChange();
+    int __incomplete__remove_CtxVolumeChanged();
+    int __incomplete__add_RingerVibrateStateChanged();
+    int __incomplete__remove_RingerVibrateStateChange();
+    int __incomplete__SetVolumeGroupGainForId();
+    int __incomplete__GetVolumeGroupGainForId();
+    int __incomplete__GetActiveVolumeGroupForEndpointId();
+    int __incomplete__GetVolumeGroupsForEndpoint();
+    int __incomplete__GetCurrentVolumeContext();
+    int __incomplete__SetVolumeGroupMuteForId();
+    int __incomplete__GetVolumeGroupMuteForId();
+    int __incomplete__SetRingerVibrateState();
+    int __incomplete__GetRingerVibrateState();
+    int __incomplete__SetPreferredChatApplication();
+    int __incomplete__ResetPreferredChatApplication();
+    int __incomplete__GetPreferredChatApplication();
+    int __incomplete__GetCurrentChatApplications();
+    int __incomplete__add_ChatContextChanged();
+    int __incomplete__remove_ChatContextChanged();
 
     [PreserveSig]
-    int SetPersistedDefaultAudioEndpoint(
-        uint processId,
-        EDataFlow flow,
-        ERole role,
-        IntPtr deviceId);
+    int SetPersistedDefaultAudioEndpoint(uint processId, EDataFlow flow, ERole role, IntPtr deviceId);
 
     [PreserveSig]
-    int GetPersistedDefaultAudioEndpoint(
-        uint processId,
-        EDataFlow flow,
-        ERole role,
-        [MarshalAs(UnmanagedType.LPWStr)] out string deviceId);
+    int GetPersistedDefaultAudioEndpoint(uint processId, EDataFlow flow, ERole role, [Out, MarshalAs(UnmanagedType.HString)] out string deviceId);
 
     [PreserveSig]
     int ClearAllPersistedApplicationDefaultEndpoints();
 }
 
-// Windows 10 (1803)
+// Downlevel Windows 10 (1809 - 21H1)
 [ComImport]
-[Guid("2a55050c-0069-4666-993d-82089408e010")]
+[Guid("2a59116d-6c4f-45e0-a74f-707e3fef9258")]
 [InterfaceType(ComInterfaceType.InterfaceIsIInspectable)]
-public interface IAudioPolicyConfigFactory_Win10_1803
+public interface IAudioPolicyConfigFactoryVariantForDownlevel
 {
-    int __vfptr0();
-    int __vfptr1();
-    int __vfptr2();
-    int __vfptr3();
+    int __incomplete__add_CtxVolumeChange();
+    int __incomplete__remove_CtxVolumeChanged();
+    int __incomplete__add_RingerVibrateStateChanged();
+    int __incomplete__remove_RingerVibrateStateChange();
+    int __incomplete__SetVolumeGroupGainForId();
+    int __incomplete__GetVolumeGroupGainForId();
+    int __incomplete__GetActiveVolumeGroupForEndpointId();
+    int __incomplete__GetVolumeGroupsForEndpoint();
+    int __incomplete__GetCurrentVolumeContext();
+    int __incomplete__SetVolumeGroupMuteForId();
+    int __incomplete__GetVolumeGroupMuteForId();
+    int __incomplete__SetRingerVibrateState();
+    int __incomplete__GetRingerVibrateState();
+    int __incomplete__SetPreferredChatApplication();
+    int __incomplete__ResetPreferredChatApplication();
+    int __incomplete__GetPreferredChatApplication();
+    int __incomplete__GetCurrentChatApplications();
+    int __incomplete__add_ChatContextChanged();
+    int __incomplete__remove_ChatContextChanged();
 
     [PreserveSig]
-    int SetPersistedDefaultAudioEndpoint(
-        uint processId,
-        EDataFlow flow,
-        ERole role,
-        IntPtr deviceId);
+    int SetPersistedDefaultAudioEndpoint(uint processId, EDataFlow flow, ERole role, IntPtr deviceId);
 
     [PreserveSig]
-    int GetPersistedDefaultAudioEndpoint(
-        uint processId,
-        EDataFlow flow,
-        ERole role,
-        [MarshalAs(UnmanagedType.LPWStr)] out string deviceId);
-
-    [PreserveSig]
-    int ClearAllPersistedApplicationDefaultEndpoints();
-}
-
-// Windows 11 22H2 / 23H2 / 24H2
-[ComImport]
-[Guid("ab653000-8411-4944-b870-78904e85d95b")]
-[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-public interface IAudioPolicyConfigFactory_Win11
-{
-    [PreserveSig]
-    int SetPersistedDefaultAudioEndpoint(
-        uint processId,
-        EDataFlow flow,
-        ERole role,
-        [MarshalAs(UnmanagedType.LPWStr)] string deviceId);
-
-    [PreserveSig]
-    int GetPersistedDefaultAudioEndpoint(
-        uint processId,
-        EDataFlow flow,
-        ERole role,
-        [MarshalAs(UnmanagedType.LPWStr)] out string deviceId);
+    int GetPersistedDefaultAudioEndpoint(uint processId, EDataFlow flow, ERole role, [Out, MarshalAs(UnmanagedType.HString)] out string deviceId);
 
     [PreserveSig]
     int ClearAllPersistedApplicationDefaultEndpoints();

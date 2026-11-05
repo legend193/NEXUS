@@ -1167,8 +1167,8 @@ public class RgbStudio3DTests
         Assert.Equal("MIC", vm.Channels[5].Title);
 
         Assert.Equal(85f, vm.Channels[0].Volume);
-        Assert.Equal(80f, vm.Channels[1].Volume);
-        Assert.Equal(85f, vm.Channels[2].Volume);
+        Assert.Equal(1.0f, mockAudioEngine.BusManager.GameChatMixMultiplier);
+        Assert.Equal(1.0f, mockAudioEngine.BusManager.ChatChatMixMultiplier);
     }
 
     [Fact]
@@ -1178,19 +1178,22 @@ public class RgbStudio3DTests
         using var vm = new Nexus.App.ViewModels.AudioStudioViewModel(mockAudioEngine);
 
         // Balanced
-        vm.ChatMixValue = 50.0;
-        Assert.Equal(80f, vm.Channels[1].Volume);
-        Assert.Equal(85f, vm.Channels[2].Volume);
+        // Balanced (0.0)
+        vm.ChatMixValue = 0.0;
+        Assert.Equal(1.0f, mockAudioEngine.BusManager.GameChatMixMultiplier);
+        Assert.Equal(1.0f, mockAudioEngine.BusManager.ChatChatMixMultiplier);
 
         // 25% ChatMix -> Chat attenuated to 50%
-        vm.ChatMixValue = 25.0;
-        Assert.Equal(80f, vm.Channels[1].Volume);
-        Assert.Equal(42f, vm.Channels[2].Volume);
+        // -0.5 ChatMix -> Game 1.0, Chat 0.5
+        vm.ChatMixValue = -0.5;
+        Assert.Equal(1.0f, mockAudioEngine.BusManager.GameChatMixMultiplier);
+        Assert.Equal(0.5f, mockAudioEngine.BusManager.ChatChatMixMultiplier);
 
         // 75% ChatMix -> Game attenuated to 50%
-        vm.ChatMixValue = 75.0;
-        Assert.Equal(40f, vm.Channels[1].Volume);
-        Assert.Equal(85f, vm.Channels[2].Volume);
+        // +0.5 ChatMix -> Game 0.5, Chat 1.0
+        vm.ChatMixValue = 0.5;
+        Assert.Equal(0.5f, mockAudioEngine.BusManager.GameChatMixMultiplier);
+        Assert.Equal(1.0f, mockAudioEngine.BusManager.ChatChatMixMultiplier);
     }
 
     [Fact]
@@ -1217,7 +1220,7 @@ public class RgbStudio3DTests
             vm1.EnablePersistence = true;
             vm1.StateFilePath = tempFile;
 
-            vm1.ChatMixValue = 60.0;
+            vm1.ChatMixValue = 0.4;
             vm1.Channels[0].Volume = 92f;
             vm1.Channels[1].Volume = 65f;
             vm1.SelectedTopTab = "Mic Studio";
@@ -1237,7 +1240,7 @@ public class RgbStudio3DTests
 
             Assert.Equal(92f, vm2.Channels[0].Volume);
             Assert.Equal(65f, vm2.Channels[1].Volume);
-            Assert.Equal(60.0, vm2.ChatMixValue);
+            Assert.Equal(0.4, vm2.ChatMixValue, 2);
             Assert.Equal("Mic Studio", vm2.SelectedTopTab);
             Assert.Equal(4.5f, vm2.MicGainDb);
             Assert.Equal(-40.0f, vm2.NoiseGateThresholdDb);

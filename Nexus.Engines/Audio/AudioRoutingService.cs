@@ -11,8 +11,16 @@ namespace Nexus.Engines.Audio;
 public class AudioRoutingService : IAudioRoutingService
 {
     private const string AudioPolicyConfigClass = "Windows.Media.Internal.AudioPolicyConfig";
+    private const string DEVINTERFACE_AUDIO_RENDER = "#{e6327cad-dcec-4949-ae8a-991e976a79d2}";
+    private const string DEVINTERFACE_AUDIO_CAPTURE = "#{2eef81be-33fa-4800-9670-1cd474972c3f}";
+    private const string MMDEVAPI_TOKEN = @"\\?\SWD#MMDEVAPI#";
+
     private readonly ILogger<AudioRoutingService>? _logger;
     private readonly bool _isSupported;
+    private readonly object _lock = new();
+
+    private IAudioPolicyConfigFactoryVariantFor21H2? _policyConfig21H2;
+    private IAudioPolicyConfigFactoryVariantForDownlevel? _policyConfigDownlevel;
 
     public bool IsSupported => _isSupported;
 
@@ -23,7 +31,101 @@ public class AudioRoutingService : IAudioRoutingService
                        Environment.OSVersion.Version.Major >= 10;
     }
 
-    public Task<bool> SetAppOutputDeviceAsync(int processId, string endpointDeviceId)
+    private void EnsurePolicyConfig()
+    {
+        if (_policyConfig21H2 != null || _policyConfigDownlevel != null) return;
+
+        lock (_lock)
+        {
+            if (_policyConfig21H2 != null || _policyConfigDownlevel != null) return;
+
+            IntPtr hClass = IntPtr.Zero;
+            try
+            {
+                int hr = CombaseNativeMethods.WindowsCreateString(
+                    AudioPolicyConfigClass,
+                    (uint)AudioPolicyConfigClass.Length,
+                    out hClass);
+
+                if (hr < 0 || hClass == IntPtr.Zero) return;
+
+                // Try 21H2 / Win11 variant first
+                try
+                {
+                    Guid iid21H2 = typeof(IAudioPolicyConfigFactoryVariantFor21H2).GUID;
+                    CombaseNativeMethods.RoGetActivationFactory(hClass, ref iid21H2, out object factoryObj);
+                    if (factoryObj is IAudioPolicyConfigFactoryVariantFor21H2 f21H2)
+                    {
+                        _policyConfig21H2 = f21H2;
+                        return;
+                    }
+                }
+                catch { }
+
+                // Fallback to Downlevel Win10 variant
+                try
+                {
+                    Guid iidDown = typeof(IAudioPolicyConfigFactoryVariantForDownlevel).GUID;
+                    CombaseNativeMethods.RoGetActivationFactory(hClass, ref iidDown, out object downObj);
+                    if (downObj is IAudioPolicyConfigFactoryVariantForDownlevel fDown)
+                    {
+                        _policyConfigDownlevel = fDown;
+                    }
+                }
+                catch { }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to activate AudioPolicyConfig COM factory.");
+            }
+            finally
+            {
+                if (hClass != IntPtr.Zero)
+                {
+                    CombaseNativeMethods.WindowsDeleteString(hClass);
+                }
+            }
+        }
+    }
+
+    public static string GenerateDeviceId(string deviceId, EDataFlow flow = EDataFlow.eRender)
+    {
+        if (string.IsNullOrWhiteSpace(deviceId)) return string.Empty;
+
+        // If already formatted, return as-is
+        if (deviceId.StartsWith(MMDEVAPI_TOKEN, StringComparison.OrdinalIgnoreCase))
+        {
+            return deviceId;
+        }
+
+        string cleanId = deviceId.Trim();
+        string suffix = flow == EDataFlow.eRender ? DEVINTERFACE_AUDIO_RENDER : DEVINTERFACE_AUDIO_CAPTURE;
+        return $"{MMDEVAPI_TOKEN}{cleanId}{suffix}";
+    }
+
+    public static string UnpackDeviceId(string? deviceId)
+    {
+        if (string.IsNullOrWhiteSpace(deviceId)) return string.Empty;
+
+        string clean = deviceId;
+        if (clean.StartsWith(MMDEVAPI_TOKEN, StringComparison.OrdinalIgnoreCase))
+        {
+            clean = clean.Substring(MMDEVAPI_TOKEN.Length);
+        }
+
+        if (clean.EndsWith(DEVINTERFACE_AUDIO_RENDER, StringComparison.OrdinalIgnoreCase))
+        {
+            clean = clean.Substring(0, clean.Length - DEVINTERFACE_AUDIO_RENDER.Length);
+        }
+        else if (clean.EndsWith(DEVINTERFACE_AUDIO_CAPTURE, StringComparison.OrdinalIgnoreCase))
+        {
+            clean = clean.Substring(0, clean.Length - DEVINTERFACE_AUDIO_CAPTURE.Length);
+        }
+
+        return clean;
+    }
+
+    public Task<bool> SetAppOutputDeviceAsync(int processId, string? endpointDeviceId)
     {
         if (!_isSupported || processId <= 0)
         {
@@ -34,47 +136,64 @@ public class AudioRoutingService : IAudioRoutingService
         {
             try
             {
-                string normalizedDeviceId = NormalizeDeviceId(endpointDeviceId);
-                bool success = InvokeAudioPolicyConfig((factory, win11Factory, win10Factory) =>
+                EnsurePolicyConfig();
+                IntPtr hDeviceId = IntPtr.Zero;
+
+                try
                 {
-                    int hr = 0;
-                    IntPtr hDeviceId = IntPtr.Zero;
-                    try
+                    if (!string.IsNullOrWhiteSpace(endpointDeviceId))
                     {
-                        if (!string.IsNullOrEmpty(normalizedDeviceId))
-                        {
-                            hDeviceId = CombaseNativeMethods.WindowsCreateString(normalizedDeviceId, normalizedDeviceId.Length);
-                        }
-
-                        if (win11Factory != null)
-                        {
-                            hr = win11Factory.SetPersistedDefaultAudioEndpoint((uint)processId, EDataFlow.eRender, ERole.eMultimedia, normalizedDeviceId);
-                            _ = win11Factory.SetPersistedDefaultAudioEndpoint((uint)processId, EDataFlow.eRender, ERole.eConsole, normalizedDeviceId);
-                        }
-                        else if (win10Factory != null)
-                        {
-                            hr = win10Factory.SetPersistedDefaultAudioEndpoint((uint)processId, EDataFlow.eRender, ERole.eMultimedia, hDeviceId);
-                            _ = win10Factory.SetPersistedDefaultAudioEndpoint((uint)processId, EDataFlow.eRender, ERole.eConsole, hDeviceId);
-                        }
-                        else if (factory is IAudioPolicyConfigFactory_Win10_1803 oldFactory)
-                        {
-                            hr = oldFactory.SetPersistedDefaultAudioEndpoint((uint)processId, EDataFlow.eRender, ERole.eMultimedia, hDeviceId);
-                            _ = oldFactory.SetPersistedDefaultAudioEndpoint((uint)processId, EDataFlow.eRender, ERole.eConsole, hDeviceId);
-                        }
-                    }
-                    finally
-                    {
-                        if (hDeviceId != IntPtr.Zero)
-                        {
-                            CombaseNativeMethods.WindowsDeleteString(hDeviceId);
-                        }
+                        string fullDevId = GenerateDeviceId(endpointDeviceId, EDataFlow.eRender);
+                        CombaseNativeMethods.WindowsCreateString(
+                            fullDevId,
+                            (uint)fullDevId.Length,
+                            out hDeviceId);
                     }
 
-                    return hr >= 0;
-                });
+                    int hr1 = -1;
+                    int hr2 = -1;
 
-                _logger?.LogInformation("SetAppOutputDevice PID {Pid} -> {DeviceId}: {Result}", processId, endpointDeviceId, success);
-                return success;
+                    if (_policyConfig21H2 != null)
+                    {
+                        hr1 = _policyConfig21H2.SetPersistedDefaultAudioEndpoint(
+                            (uint)processId,
+                            EDataFlow.eRender,
+                            ERole.eMultimedia,
+                            hDeviceId);
+
+                        hr2 = _policyConfig21H2.SetPersistedDefaultAudioEndpoint(
+                            (uint)processId,
+                            EDataFlow.eRender,
+                            ERole.eConsole,
+                            hDeviceId);
+                    }
+                    else if (_policyConfigDownlevel != null)
+                    {
+                        hr1 = _policyConfigDownlevel.SetPersistedDefaultAudioEndpoint(
+                            (uint)processId,
+                            EDataFlow.eRender,
+                            ERole.eMultimedia,
+                            hDeviceId);
+
+                        hr2 = _policyConfigDownlevel.SetPersistedDefaultAudioEndpoint(
+                            (uint)processId,
+                            EDataFlow.eRender,
+                            ERole.eConsole,
+                            hDeviceId);
+                    }
+
+                    bool success = hr1 >= 0 || hr2 >= 0;
+                    _logger?.LogInformation("SetAppOutputDevice PID {Pid} -> {DeviceId} (hr1: 0x{Hr1:X8}, hr2: 0x{Hr2:X8})",
+                        processId, endpointDeviceId, hr1, hr2);
+                    return success;
+                }
+                finally
+                {
+                    if (hDeviceId != IntPtr.Zero)
+                    {
+                        CombaseNativeMethods.WindowsDeleteString(hDeviceId);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -95,31 +214,36 @@ public class AudioRoutingService : IAudioRoutingService
         {
             try
             {
-                string? routedDev = null;
-                InvokeAudioPolicyConfig((factory, win11Factory, win10Factory) =>
+                EnsurePolicyConfig();
+                string? rawDeviceId = null;
+                int hr = -1;
+
+                if (_policyConfig21H2 != null)
                 {
-                    int hr = -1;
-                    if (win11Factory != null)
-                    {
-                        hr = win11Factory.GetPersistedDefaultAudioEndpoint((uint)processId, EDataFlow.eRender, ERole.eMultimedia, out routedDev);
-                    }
-                    else if (win10Factory != null)
-                    {
-                        hr = win10Factory.GetPersistedDefaultAudioEndpoint((uint)processId, EDataFlow.eRender, ERole.eMultimedia, out routedDev);
-                    }
-                    else if (factory is IAudioPolicyConfigFactory_Win10_1803 oldFactory)
-                    {
-                        hr = oldFactory.GetPersistedDefaultAudioEndpoint((uint)processId, EDataFlow.eRender, ERole.eMultimedia, out routedDev);
-                    }
+                    hr = _policyConfig21H2.GetPersistedDefaultAudioEndpoint(
+                        (uint)processId,
+                        EDataFlow.eRender,
+                        ERole.eMultimedia,
+                        out rawDeviceId);
+                }
+                else if (_policyConfigDownlevel != null)
+                {
+                    hr = _policyConfigDownlevel.GetPersistedDefaultAudioEndpoint(
+                        (uint)processId,
+                        EDataFlow.eRender,
+                        ERole.eMultimedia,
+                        out rawDeviceId);
+                }
 
-                    return hr >= 0;
-                });
-
-                return DenormalizeDeviceId(routedDev);
+                if (hr >= 0 && !string.IsNullOrEmpty(rawDeviceId))
+                {
+                    return UnpackDeviceId(rawDeviceId);
+                }
+                return null;
             }
             catch (Exception ex)
             {
-                _logger?.LogDebug(ex, "Could not get persisted audio endpoint for PID {Pid}", processId);
+                _logger?.LogWarning(ex, "Failed to get audio routing for PID {Pid}", processId);
                 return null;
             }
         });
@@ -127,92 +251,11 @@ public class AudioRoutingService : IAudioRoutingService
 
     public Task<bool> ResetAppRoutingAsync(int processId)
     {
-        return SetAppOutputDeviceAsync(processId, string.Empty);
+        return SetAppOutputDeviceAsync(processId, null);
     }
 
-    private static string NormalizeDeviceId(string deviceId)
+    public Task<bool> ResetAppRoutingToDefaultAsync(int processId)
     {
-        if (string.IsNullOrWhiteSpace(deviceId)) return string.Empty;
-
-        // If it starts with standard MMDevAPI GUID prefix, convert to WinRT device interface path
-        if (deviceId.StartsWith("{0.0.0.00000000}", StringComparison.OrdinalIgnoreCase))
-        {
-            return @"\\?\SWD#MMDEVAPI#" + deviceId + @"#{e6327cad-dcec-4949-ae8a-991e976a79d2}";
-        }
-
-        return deviceId;
-    }
-
-    private static string? DenormalizeDeviceId(string? winRtPath)
-    {
-        if (string.IsNullOrWhiteSpace(winRtPath)) return null;
-
-        // If it's formatted like \\?\SWD#MMDEVAPI#{0.0.0.00000000}.{guid}#... extract the clean MMDevAPI ID
-        int idx = winRtPath.IndexOf("{0.0.0.00000000}", StringComparison.OrdinalIgnoreCase);
-        if (idx >= 0)
-        {
-            int hashIdx = winRtPath.IndexOf('#', idx);
-            if (hashIdx > idx)
-            {
-                return winRtPath.Substring(idx, hashIdx - idx);
-            }
-            return winRtPath.Substring(idx);
-        }
-
-        return winRtPath;
-    }
-
-    private static bool InvokeAudioPolicyConfig(Func<object, IAudioPolicyConfigFactory_Win11?, IAudioPolicyConfigFactory_Win10_1809?, bool> action)
-    {
-        IntPtr hClass = IntPtr.Zero;
-        try
-        {
-            hClass = CombaseNativeMethods.WindowsCreateString(AudioPolicyConfigClass, AudioPolicyConfigClass.Length);
-
-            // Attempt 1: Windows 11 IAudioPolicyConfigFactory
-            Guid iidWin11 = typeof(IAudioPolicyConfigFactory_Win11).GUID;
-            try
-            {
-                CombaseNativeMethods.RoGetActivationFactory(hClass, ref iidWin11, out object factoryWin11);
-                if (factoryWin11 is IAudioPolicyConfigFactory_Win11 win11)
-                {
-                    return action(factoryWin11, win11, null);
-                }
-            }
-            catch { }
-
-            // Attempt 2: Windows 10 (1809+) IAudioPolicyConfigFactory
-            Guid iidWin10 = typeof(IAudioPolicyConfigFactory_Win10_1809).GUID;
-            try
-            {
-                CombaseNativeMethods.RoGetActivationFactory(hClass, ref iidWin10, out object factoryWin10);
-                if (factoryWin10 is IAudioPolicyConfigFactory_Win10_1809 win10)
-                {
-                    return action(factoryWin10, null, win10);
-                }
-            }
-            catch { }
-
-            // Attempt 3: Windows 10 (1803)
-            Guid iid1803 = typeof(IAudioPolicyConfigFactory_Win10_1803).GUID;
-            try
-            {
-                CombaseNativeMethods.RoGetActivationFactory(hClass, ref iid1803, out object factory1803);
-                if (factory1803 != null)
-                {
-                    return action(factory1803, null, null);
-                }
-            }
-            catch { }
-
-            return false;
-        }
-        finally
-        {
-            if (hClass != IntPtr.Zero)
-            {
-                CombaseNativeMethods.WindowsDeleteString(hClass);
-            }
-        }
+        return SetAppOutputDeviceAsync(processId, null);
     }
 }
