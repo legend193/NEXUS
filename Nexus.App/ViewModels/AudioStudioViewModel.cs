@@ -34,6 +34,7 @@ public class AudioSessionItem : ViewModelBase
 {
     private readonly IAudioSession? _session;
     private string _assignedChannel = "Game";
+    private string _pillColorHex = "#10B981";
     private ImageSource? _icon;
     private bool _isMuted;
     private float _volume = 100f;
@@ -42,7 +43,13 @@ public class AudioSessionItem : ViewModelBase
     public float PeakLevel => _session?.PeakLevel ?? 0f;
     public string DisplayName { get; init; } = string.Empty;
     public string ProcessName { get; init; } = string.Empty;
-    public string PillColorHex { get; init; } = "#10B981";
+    public string DisplayNameUpper => (string.IsNullOrWhiteSpace(ProcessName) ? DisplayName : ProcessName.Replace(".exe", "", StringComparison.OrdinalIgnoreCase)).ToUpperInvariant();
+
+    public string PillColorHex
+    {
+        get => _pillColorHex;
+        set => SetProperty(ref _pillColorHex, value);
+    }
 
     public ImageSource? Icon
     {
@@ -53,7 +60,21 @@ public class AudioSessionItem : ViewModelBase
     public string AssignedChannel
     {
         get => _assignedChannel;
-        set => SetProperty(ref _assignedChannel, value);
+        set
+        {
+            if (SetProperty(ref _assignedChannel, value))
+            {
+                PillColorHex = value switch
+                {
+                    var c when c.StartsWith("Game", StringComparison.OrdinalIgnoreCase) => "#10B981",
+                    var c when c.StartsWith("Chat", StringComparison.OrdinalIgnoreCase) => "#00B4D8",
+                    var c when c.StartsWith("Media", StringComparison.OrdinalIgnoreCase) => "#EC4899",
+                    var c when c.StartsWith("Aux", StringComparison.OrdinalIgnoreCase) => "#A855F7",
+                    var c when c.StartsWith("Mic", StringComparison.OrdinalIgnoreCase) => "#F59E0B",
+                    _ => "#10B981"
+                };
+            }
+        }
     }
 
     public float Volume
@@ -89,7 +110,7 @@ public class AudioSessionItem : ViewModelBase
         _session = session;
         DisplayName = session?.DisplayName ?? fallbackName;
         ProcessName = session?.ProcessName ?? fallbackName;
-        PillColorHex = pillColor;
+        _pillColorHex = pillColor;
         _assignedChannel = initialChannel;
         _isMuted = session?.IsMuted ?? false;
         _volume = session != null ? session.Volume * 100f : 100f;
@@ -1411,16 +1432,38 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             _ => SonarBusType.Game
         };
 
+        session.PillColorHex = busType switch
+        {
+            SonarBusType.Game => "#10B981",
+            SonarBusType.Chat => "#00B4D8",
+            SonarBusType.Media => "#EC4899",
+            SonarBusType.Aux => "#A855F7",
+            SonarBusType.Mic => "#F59E0B",
+            _ => "#10B981"
+        };
+
+        foreach (var ch in Channels)
+        {
+            if (ch.AssignedApps.Contains(session))
+            {
+                ch.AssignedApps.Remove(session);
+            }
+        }
+
+        var targetStrip = Channels.FirstOrDefault(c => c.ChannelType.ToString().Equals(busType.ToString(), StringComparison.OrdinalIgnoreCase));
+        if (targetStrip != null && !targetStrip.AssignedApps.Contains(session))
+        {
+            targetStrip.AssignedApps.Add(session);
+        }
+
         _audioEngine.BusManager.AssignProcessToBus(session.ProcessId, busType);
         _audioEngine.BusManager.AssignProcessNameToBus(session.ProcessName, busType);
 
-        var targetStrip = Channels.FirstOrDefault(c => c.ChannelType.ToString().Equals(busType.ToString(), StringComparison.OrdinalIgnoreCase));
         if (targetStrip?.SelectedDevice != null && !string.IsNullOrEmpty(targetStrip.SelectedDevice.Id))
         {
             _ = _audioEngine.RoutingService.SetAppOutputDeviceAsync(session.ProcessId, targetStrip.SelectedDevice.Id);
         }
 
-        _ = RefreshAsync();
         SaveState();
     }
 
