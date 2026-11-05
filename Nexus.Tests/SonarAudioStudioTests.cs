@@ -201,4 +201,30 @@ public class SonarAudioStudioTests
 
         Assert.Equal(preformatted, result);
     }
+
+    [Fact]
+    public void AudioStudioViewModel_HeroTelemetry_ReportsAccurateDashboardMetrics()
+    {
+        var audioEngine = new AudioEngine();
+
+        using var vm = new Nexus.App.ViewModels.AudioStudioViewModel(audioEngine);
+        vm.EnablePersistence = false;
+
+        // Verify Master volume hero metric
+        vm.Channels[0].Volume = 78f;
+        Assert.Equal(78.0, vm.MasterVolumePercent);
+        Assert.Equal("78%", vm.MasterVolumeText);
+
+        // Verify ChatMix Hero metrics
+        vm.Channels[1].Volume = 100f;
+        vm.Channels[2].Volume = 65f;
+        Assert.Equal(100, vm.GameVolumePercent);
+        Assert.Equal(65, vm.ChatVolumePercent);
+
+        // Verify DSP preset name
+        Assert.NotNull(vm.ActivePresetName);
+
+        // Verify Streams count
+        Assert.Equal("0", vm.ActiveStreamsCountText);
+    }
 }

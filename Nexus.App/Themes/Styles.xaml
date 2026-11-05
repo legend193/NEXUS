@@ -458,7 +458,7 @@
         </Setter>
     </Style>
 
-    <!-- Professional SteelSeries Sonar Vertical Fader Style (Exact White Thumb Match) -->
+    <!-- Professional SteelSeries Sonar Vertical Fader Style (Exact White Thumb & Colored Track Match) -->
     <Style x:Key="SonarVerticalFader" TargetType="Slider">
         <Setter Property="Orientation" Value="Vertical" />
         <Setter Property="Width" Value="32" />
@@ -468,7 +468,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Slider">
                     <Grid HorizontalAlignment="Center">
-                        <!-- Dark Recessed Fader Track Slot -->
+                        <!-- Dark Recessed Fader Track Slot (Background) -->
                         <Border Width="4" CornerRadius="2"
                                 Background="#0A0B0F"
                                 BorderBrush="#1C1F2B"
@@ -476,16 +476,30 @@
                                 HorizontalAlignment="Center" />
 
                         <Track x:Name="PART_Track">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="{x:Static Slider.DecreaseLarge}">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate>
+                                            <Border Width="4" CornerRadius="2"
+                                                    Background="{Binding RelativeSource={RelativeSource AncestorType=Slider}, Path=Foreground}"
+                                                    HorizontalAlignment="Center" />
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.DecreaseRepeatButton>
                             <Track.Thumb>
                                 <Thumb Width="22" Height="12" Cursor="Hand">
                                     <Thumb.Template>
                                         <ControlTemplate>
                                             <!-- Sonar Metallic White Rectangular Thumb with Center Grip -->
                                             <Border CornerRadius="3"
-                                                    Background="#E2E8F0"
-                                                    BorderBrush="#FFFFFF"
+                                                    Background="#FFFFFF"
+                                                    BorderBrush="#E2E8F0"
                                                     BorderThickness="1">
-                                                <Rectangle Width="10" Height="2" Fill="#64748B" HorizontalAlignment="Center" VerticalAlignment="Center" RadiusX="1" RadiusY="1" />
+                                                <Border.Effect>
+                                                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Color="#000000" Opacity="0.4" />
+                                                </Border.Effect>
+                                                <Rectangle Width="10" Height="2" Fill="#94A3B8" HorizontalAlignment="Center" VerticalAlignment="Center" RadiusX="1" RadiusY="1" />
                                             </Border>
                                         </ControlTemplate>
                                     </Thumb.Template>
@@ -515,15 +529,30 @@
                                 VerticalAlignment="Center" />
 
                         <Track x:Name="PART_Track">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="{x:Static Slider.DecreaseLarge}">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate>
+                                            <Border Height="4" CornerRadius="2"
+                                                    Background="{StaticResource AccentBrush}"
+                                                    VerticalAlignment="Center" />
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.DecreaseRepeatButton>
                             <Track.Thumb>
-                                <Thumb Width="11" Height="22" Cursor="Hand">
+                                <Thumb Width="12" Height="22" Cursor="Hand">
                                     <Thumb.Template>
                                         <ControlTemplate>
                                             <!-- Sonar White Vertical Thumb -->
-                                            <Border CornerRadius="2"
+                                            <Border CornerRadius="3"
                                                     Background="#FFFFFF"
                                                     BorderBrush="#E2E8F0"
-                                                    BorderThickness="1" />
+                                                    BorderThickness="1">
+                                                <Border.Effect>
+                                                    <DropShadowEffect BlurRadius="4" ShadowDepth="1" Color="#000000" Opacity="0.4" />
+                                                </Border.Effect>
+                                            </Border>
                                         </ControlTemplate>
                                     </Thumb.Template>
                                 </Thumb>

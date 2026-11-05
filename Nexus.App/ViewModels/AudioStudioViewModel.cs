@@ -287,9 +287,9 @@ public class SonarChannelStripItem : ViewModelBase
     {
         get
         {
-            if (_selectedDevice == null) return "غير متصل";
-            if (ChannelType == SonarChannelType.Master) return "المخرج الفيزيائي الرئيسي (Hardware Output)";
-            return _selectedDevice.IsVirtual ? "مسار Sonar الافتراضي (Virtual Bus)" : "منفذ أجهزة (Direct Hardware)";
+            if (_selectedDevice == null) return "Disconnected";
+            if (ChannelType == SonarChannelType.Master) return "Primary Hardware Output";
+            return _selectedDevice.IsVirtual ? "Sonar Virtual Bus" : "Direct Hardware Device";
         }
     }
 
@@ -681,6 +681,30 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         }
     }
 
+    // Hero Telemetry Properties (Dashboard Unified Layout)
+    public int ActiveStreamsCount => AppRoutings.Count;
+    public string ActiveStreamsCountText => AppRoutings.Count.ToString();
+    public double MasterVolumePercent => Channels.Count > 0 ? (double)Channels[0].Volume : 100.0;
+    public string MasterVolumeText => Channels.Count > 0 ? $"{(int)Channels[0].Volume}%" : "100%";
+    public string MasterDeviceName => Channels.Count > 0 && Channels[0].SelectedDevice != null ? Channels[0].SelectedDevice.DisplayName : "SteelSeries Sonar - Gaming";
+    public string MasterDecibelsText => Channels.Count > 0 ? Channels[0].DecibelsDisplay : "0.0 dB";
+    public string ActivePresetName => SelectedPreset?.Name ?? "Flat";
+    public int GameVolumePercent => Channels.Count > 1 ? (int)Math.Round(Channels[1].Volume) : 100;
+    public int ChatVolumePercent => Channels.Count > 2 ? (int)Math.Round(Channels[2].Volume) : 100;
+
+    public void NotifyHeroPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(ActiveStreamsCount));
+        OnPropertyChanged(nameof(ActiveStreamsCountText));
+        OnPropertyChanged(nameof(MasterVolumePercent));
+        OnPropertyChanged(nameof(MasterVolumeText));
+        OnPropertyChanged(nameof(MasterDeviceName));
+        OnPropertyChanged(nameof(MasterDecibelsText));
+        OnPropertyChanged(nameof(ActivePresetName));
+        OnPropertyChanged(nameof(GameVolumePercent));
+        OnPropertyChanged(nameof(ChatVolumePercent));
+    }
+
     public ICommand SelectTabCommand { get; }
     public ICommand ResetAllVolumesCommand { get; }
     public ICommand ResetEqBandsCommand { get; }
@@ -692,6 +716,22 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
     public ICommand PopoutMixerCommand { get; }
     public ICommand ToggleAlwaysOnTopCommand { get; }
     public ICommand ClosePopoutCommand { get; }
+    public ICommand SelectEffectCommand { get; }
+    public ICommand ApplyNamedPresetCommand { get; }
+
+    private bool _isAudioEffectsEnabled = true;
+    public bool IsAudioEffectsEnabled
+    {
+        get => _isAudioEffectsEnabled;
+        set => SetProperty(ref _isAudioEffectsEnabled, value);
+    }
+
+    private string _selectedEffect = "Equalizer";
+    public string SelectedEffect
+    {
+        get => _selectedEffect;
+        set => SetProperty(ref _selectedEffect, value);
+    }
 
     public AudioStudioViewModel(IAudioEngine audioEngine)
     {
@@ -785,6 +825,7 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
                     _audioEngine.DefaultRecordingDevice.MasterVolume = Math.Clamp(vol / 100f, 0f, 1f);
                 }
 
+                NotifyHeroPropertiesChanged();
                 SaveState();
             };
 
@@ -898,6 +939,39 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
         ClosePopoutCommand = new RelayCommand(ClosePopout);
         PopoutMixerCommand = new RelayCommand(OpenOrActivatePopout);
+
+        SelectEffectCommand = new RelayCommand(param =>
+        {
+            if (param is string effect)
+            {
+                SelectedEffect = effect;
+                if (effect.Equals("Equalizer", StringComparison.OrdinalIgnoreCase))
+                {
+                    SelectedTopTab = "Game";
+                }
+                else if (effect.Equals("VoiceClarity", StringComparison.OrdinalIgnoreCase) || effect.Equals("Voice Clarity", StringComparison.OrdinalIgnoreCase))
+                {
+                    SelectedTopTab = "Chat";
+                }
+                else if (effect.Equals("NoiseGate", StringComparison.OrdinalIgnoreCase) || effect.Equals("Noise Gate", StringComparison.OrdinalIgnoreCase) ||
+                         effect.Equals("Compressor", StringComparison.OrdinalIgnoreCase))
+                {
+                    SelectedTopTab = "Mic";
+                }
+            }
+        });
+
+        ApplyNamedPresetCommand = new RelayCommand(param =>
+        {
+            if (param is string name)
+            {
+                var matched = EqualizerPresets.FirstOrDefault(p => p.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
+                if (matched != null)
+                {
+                    SelectedPreset = matched;
+                }
+            }
+        });
 
         // Load saved state before starting loops
         LoadSavedState();
@@ -1204,6 +1278,8 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             SyncCollection(Channels[3].AssignedApps, mediaSessions);
             SyncCollection(Channels[4].AssignedApps, auxSessions);
             SyncCollection(AppRoutings, routingList);
+
+            NotifyHeroPropertiesChanged();
         }
         catch { }
     }

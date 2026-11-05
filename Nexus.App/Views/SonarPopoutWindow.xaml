@@ -64,14 +64,14 @@
 
                     <!-- Floating Pill Badge -->
                     <Border Background="#14233D" CornerRadius="5" Padding="7,2" Margin="0,0,8,0" VerticalAlignment="Center">
-                        <TextBlock Text="نافذة منبثقة عائمة" FontSize="10" FontWeight="SemiBold" Foreground="#60A5FA" />
+                        <TextBlock Text="Floating Mixer" FontSize="10" FontWeight="SemiBold" Foreground="#60A5FA" />
                     </Border>
 
                     <!-- Realtime Engine Sync Badge -->
                     <Border Background="#11241C" CornerRadius="5" Padding="7,2" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse Width="5" Height="5" Fill="#10B981" Margin="0,0,5,0" VerticalAlignment="Center" />
-                            <TextBlock Text="مزامنة فورية (0ms Latency)" FontSize="9" FontWeight="Bold" Foreground="#34D399" />
+                            <TextBlock Text="Realtime Sync (0ms)" FontSize="9" FontWeight="Bold" Foreground="#34D399" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -82,20 +82,20 @@
                     <Button Style="{StaticResource NexusPillButton}"
                             Command="{Binding ToggleAlwaysOnTopCommand}"
                             Height="26" Padding="10,2" Margin="0,0,10,0"
-                            ToolTip="تثبيت النافذة دائماً في المقدمة فوق الألعاب والشاشات">
+                            ToolTip="Pin window always on top">
                         <StackPanel Orientation="Horizontal">
                             <Path Data="{StaticResource IconPin}" Stroke="#00D2FF" StrokeThickness="1.5" Width="10" Height="10" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
-                            <TextBlock Text="دائماً بالمقدمة" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock Text="Always On Top" FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
 
                     <!-- Minimize Window Button -->
-                    <Button Style="{StaticResource WindowCloseButton}" Click="BtnMinimize_Click" Width="26" Height="26" Margin="0,0,4,0" ToolTip="تصغير النافذة">
+                    <Button Style="{StaticResource WindowCloseButton}" Click="BtnMinimize_Click" Width="26" Height="26" Margin="0,0,4,0" ToolTip="Minimize">
                         <Path Data="{StaticResource IconMinimize}" Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1.5" Width="10" Height="2" Stretch="Uniform" />
                     </Button>
 
                     <!-- Close Window Button -->
-                    <Button Style="{StaticResource WindowCloseButton}" Click="BtnClose_Click" Width="26" Height="26" ToolTip="إغلاق النافذة المنبثقة">
+                    <Button Style="{StaticResource WindowCloseButton}" Click="BtnClose_Click" Width="26" Height="26" ToolTip="Close">
                         <Path Data="{StaticResource IconClose}" Stroke="{StaticResource TextSecondaryBrush}" StrokeThickness="1.5" Width="10" Height="10" Stretch="Uniform" />
                     </Button>
                 </StackPanel>
@@ -122,7 +122,7 @@
                     <!-- ================================================================= -->
                     <!-- Channel 0: MASTER (Cobalt Blue #3B82F6)                           -->
                     <!-- ================================================================= -->
-                    <Border Grid.Row="0" Grid.Column="0" Background="#0F131D" CornerRadius="10" Padding="8,10" Margin="0,0,3,0" BorderBrush="#253556" BorderThickness="1">
+                    <Border Grid.Row="0" Grid.Column="0" Background="{StaticResource CardBgBrush}" CornerRadius="10" Padding="8,10" Margin="0,0,3,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
                         <Grid DataContext="{Binding Channels[0]}">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -148,7 +148,7 @@
                                           ItemsSource="{Binding AvailableDevices}"
                                           SelectedItem="{Binding SelectedDevice}"
                                           DisplayMemberPath="DisplayName"
-                                          ToolTip="مخرج الصوت المخصص لقناة الماستر" />
+                                          ToolTip="Master Output Device" />
                             </Border>
 
                             <!-- Tag Badge -->
@@ -174,7 +174,7 @@
                                     <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                 </UniformGrid>
 
-                                <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Height="140" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
+                                <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#00D2FF" Height="140" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
                                 <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="11" Height="140" VerticalAlignment="Center" />
                             </Grid>
 
@@ -186,8 +186,8 @@
 
                             <!-- Mute & Solo Buttons -->
                             <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,6">
-                                <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,5,0" ToolTip="كتم الماستر (Mute)" />
-                                <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
+                                <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,5,0" ToolTip="Mute Channel" />
+                                <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="Solo Channel" />
                             </StackPanel>
 
                             <!-- Bottom Tag -->
@@ -200,7 +200,7 @@
                     <!-- ================================================================= -->
                     <!-- Channel 1: GAME (Emerald #10B981)                                 -->
                     <!-- ================================================================= -->
-                    <Border Grid.Row="0" Grid.Column="1" Background="#0F1517" CornerRadius="10" Padding="8,10" Margin="2,0,2,0" BorderBrush="#1C382B" BorderThickness="1"
+                    <Border Grid.Row="0" Grid.Column="1" Background="{StaticResource CardBgBrush}" CornerRadius="10" Padding="8,10" Margin="2,0,2,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
                             AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Game Channel">
                         <Grid DataContext="{Binding Channels[1]}">
                             <Grid.RowDefinitions>
@@ -225,7 +225,7 @@
                                           ItemsSource="{Binding AvailableDevices}"
                                           SelectedItem="{Binding SelectedDevice}"
                                           DisplayMemberPath="DisplayName"
-                                          ToolTip="مخرج الصوت المخصص لقناة الألعاب" />
+                                          ToolTip="Game Audio Endpoint" />
                             </Border>
 
                             <Border Grid.Row="2" Background="#132B20" CornerRadius="4" Padding="5,2" Margin="0,0,0,6" HorizontalAlignment="Center">
@@ -249,7 +249,7 @@
                                     <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                 </UniformGrid>
 
-                                <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Height="140" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
+                                <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#10B981" Height="140" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
                                 <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="11" Height="140" VerticalAlignment="Center" />
                             </Grid>
 
@@ -259,8 +259,8 @@
                             </StackPanel>
 
                             <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,6">
-                                <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,5,0" ToolTip="كتم القناة (Mute)" />
-                                <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
+                                <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,5,0" ToolTip="Mute Channel" />
+                                <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="Solo Channel" />
                             </StackPanel>
 
                             <!-- Apps Container Box with Drag & Drop -->
@@ -306,7 +306,7 @@
                     <!-- ================================================================= -->
                     <!-- Channel 2: CHAT (Electric Cyan #00B4D8)                           -->
                     <!-- ================================================================= -->
-                    <Border Grid.Row="0" Grid.Column="2" Background="#0C141A" CornerRadius="10" Padding="8,10" Margin="2,0,2,0" BorderBrush="#163442" BorderThickness="1"
+                    <Border Grid.Row="0" Grid.Column="2" Background="{StaticResource CardBgBrush}" CornerRadius="10" Padding="8,10" Margin="2,0,2,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
                             AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Chat Channel">
                         <Grid DataContext="{Binding Channels[2]}">
                             <Grid.RowDefinitions>
@@ -331,7 +331,7 @@
                                           ItemsSource="{Binding AvailableDevices}"
                                           SelectedItem="{Binding SelectedDevice}"
                                           DisplayMemberPath="DisplayName"
-                                          ToolTip="مخرج الصوت المخصص لقناة المحادثة (Discord / Teams)" />
+                                          ToolTip="Chat Audio Endpoint (Discord / Teams)" />
                             </Border>
 
                             <Border Grid.Row="2" Background="#102530" CornerRadius="4" Padding="5,2" Margin="0,0,0,6" HorizontalAlignment="Center">
@@ -355,7 +355,7 @@
                                     <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                 </UniformGrid>
 
-                                <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Height="140" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
+                                <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#00B4D8" Height="140" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
                                 <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="11" Height="140" VerticalAlignment="Center" />
                             </Grid>
 
@@ -365,8 +365,8 @@
                             </StackPanel>
 
                             <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,6">
-                                <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,5,0" ToolTip="كتم القناة (Mute)" />
-                                <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
+                                <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,5,0" ToolTip="Mute Channel" />
+                                <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="Solo Channel" />
                             </StackPanel>
 
                             <!-- Apps Container Box with Drag & Drop -->
@@ -412,7 +412,7 @@
                     <!-- ================================================================= -->
                     <!-- Channel 3: MEDIA (Neon Pink #EC4899)                              -->
                     <!-- ================================================================= -->
-                    <Border Grid.Row="0" Grid.Column="3" Background="#140F18" CornerRadius="10" Padding="8,10" Margin="2,0,2,0" BorderBrush="#3B1C2E" BorderThickness="1"
+                    <Border Grid.Row="0" Grid.Column="3" Background="{StaticResource CardBgBrush}" CornerRadius="10" Padding="8,10" Margin="2,0,2,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
                             AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Media Channel">
                         <Grid DataContext="{Binding Channels[3]}">
                             <Grid.RowDefinitions>
@@ -437,7 +437,7 @@
                                           ItemsSource="{Binding AvailableDevices}"
                                           SelectedItem="{Binding SelectedDevice}"
                                           DisplayMemberPath="DisplayName"
-                                          ToolTip="مخرج الصوت المخصص لقناة الوسائط (Spotify / YouTube)" />
+                                          ToolTip="Media Audio Endpoint (Spotify / YouTube)" />
                             </Border>
 
                             <Border Grid.Row="2" Background="#2B1422" CornerRadius="4" Padding="5,2" Margin="0,0,0,6" HorizontalAlignment="Center">
@@ -461,7 +461,7 @@
                                     <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                 </UniformGrid>
 
-                                <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Height="140" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
+                                <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#E11D48" Height="140" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
                                 <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="11" Height="140" VerticalAlignment="Center" />
                             </Grid>
 
@@ -471,8 +471,8 @@
                             </StackPanel>
 
                             <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,6">
-                                <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,5,0" ToolTip="كتم القناة (Mute)" />
-                                <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
+                                <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,5,0" ToolTip="Mute Channel" />
+                                <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="Solo Channel" />
                             </StackPanel>
 
                             <!-- Apps Container Box with Drag & Drop -->
@@ -518,7 +518,7 @@
                     <!-- ================================================================= -->
                     <!-- Channel 4: AUX (Studio Purple #A855F7)                            -->
                     <!-- ================================================================= -->
-                    <Border Grid.Row="0" Grid.Column="4" Background="#120F1A" CornerRadius="10" Padding="8,10" Margin="2,0,2,0" BorderBrush="#341E47" BorderThickness="1"
+                    <Border Grid.Row="0" Grid.Column="4" Background="{StaticResource CardBgBrush}" CornerRadius="10" Padding="8,10" Margin="2,0,2,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
                             AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Aux Channel">
                         <Grid DataContext="{Binding Channels[4]}">
                             <Grid.RowDefinitions>
@@ -543,7 +543,7 @@
                                           ItemsSource="{Binding AvailableDevices}"
                                           SelectedItem="{Binding SelectedDevice}"
                                           DisplayMemberPath="DisplayName"
-                                          ToolTip="مخرج الصوت المخصص للقناة الإضافية (AUX)" />
+                                          ToolTip="Aux Audio Endpoint" />
                             </Border>
 
                             <Border Grid.Row="2" Background="#261536" CornerRadius="4" Padding="5,2" Margin="0,0,0,6" HorizontalAlignment="Center">
@@ -567,7 +567,7 @@
                                     <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                 </UniformGrid>
 
-                                <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Height="140" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
+                                <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#A855F7" Height="140" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
                                 <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="11" Height="140" VerticalAlignment="Center" />
                             </Grid>
 
@@ -577,8 +577,8 @@
                             </StackPanel>
 
                             <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,6">
-                                <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,5,0" ToolTip="كتم القناة (Mute)" />
-                                <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل القناة (Solo)" />
+                                <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,5,0" ToolTip="Mute Channel" />
+                                <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="Solo Channel" />
                             </StackPanel>
 
                             <!-- Apps Container Box with Drag & Drop -->
@@ -624,7 +624,7 @@
                     <!-- ================================================================= -->
                     <!-- Channel 5: MIC (Amber Gold #F59E0B)                               -->
                     <!-- ================================================================= -->
-                    <Border Grid.Row="0" Grid.Column="5" Background="#16120C" CornerRadius="10" Padding="8,10" Margin="3,0,0,0" BorderBrush="#3D2910" BorderThickness="1"
+                    <Border Grid.Row="0" Grid.Column="5" Background="{StaticResource CardBgBrush}" CornerRadius="10" Padding="8,10" Margin="3,0,0,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1"
                             AllowDrop="True" Drop="ChannelTray_Drop" DragOver="ChannelTray_DragOver" Tag="Mic Channel">
                         <Grid DataContext="{Binding Channels[5]}">
                             <Grid.RowDefinitions>
@@ -649,7 +649,7 @@
                                           ItemsSource="{Binding AvailableDevices}"
                                           SelectedItem="{Binding SelectedDevice}"
                                           DisplayMemberPath="DisplayName"
-                                          ToolTip="جهاز إدخال المايكروفون (Input Device)" />
+                                          ToolTip="Microphone Input Device" />
                             </Border>
 
                             <Border Grid.Row="2" Background="#2D1E0C" CornerRadius="4" Padding="5,2" Margin="0,0,0,6" HorizontalAlignment="Center">
@@ -673,7 +673,7 @@
                                     <TextBlock Text="-inf" FontSize="8" Foreground="#475569" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                 </UniformGrid>
 
-                                <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Height="140" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
+                                <Slider Grid.Column="1" Style="{StaticResource SonarVerticalFader}" Foreground="#F59E0B" Height="140" Value="{Binding Volume}" Minimum="0" Maximum="100" Margin="0,0,5,0" />
                                 <ctrl:StereoVuMeter Grid.Column="2" LevelLeft="{Binding PeakLevelLeft}" LevelRight="{Binding PeakLevelRight}" Width="11" Height="140" VerticalAlignment="Center" />
                             </Grid>
 
@@ -683,8 +683,8 @@
                             </StackPanel>
 
                             <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,6">
-                                <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,5,0" ToolTip="كتم المايكروفون (Mute Mic)" />
-                                <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="عزل المايكروفون (Solo)" />
+                                <ToggleButton Style="{StaticResource SonarMuteButton}" IsChecked="{Binding IsMuted, Mode=TwoWay}" Margin="0,0,5,0" ToolTip="Mute Microphone" />
+                                <ToggleButton Style="{StaticResource SonarSoloButton}" IsChecked="{Binding IsSolo, Mode=TwoWay}" ToolTip="Solo Channel" />
                             </StackPanel>
 
                             <!-- Apps Container Box with Drag & Drop -->
@@ -731,8 +731,8 @@
                     <!-- COMPACT CHATMIX (Directly under Column 1 GAME & Column 2 CHAT)     -->
                     <!-- ================================================================= -->
                     <Border Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
-                            Background="#080C14" CornerRadius="8" Padding="10,6" Margin="2,8,2,0"
-                            BorderBrush="#1C382B" BorderThickness="1.2">
+                            Background="{StaticResource CardBgBrush}" CornerRadius="8" Padding="10,6" Margin="2,8,2,0"
+                            BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1.2">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -779,16 +779,16 @@
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                     <Ellipse Width="6" Height="6" Fill="#00D2FF" Margin="0,0,8,0" VerticalAlignment="Center" />
-                    <TextBlock Text="NEXUS SteelSeries Sonar Engine • تحكم متزامن لحظياً في جميع مسارات الصوت" FontSize="11" Foreground="#64748B" VerticalAlignment="Center" />
+                    <TextBlock Text="NEXUS SteelSeries Sonar Engine • Ultra-Low Latency Synchronized Audio Streams" FontSize="11" Foreground="#64748B" VerticalAlignment="Center" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource NexusPillButton}" Command="{Binding MuteAllChannelsCommand}" Margin="0,0,6,0" Padding="10,4" Content="كتم الكل" FontSize="11" />
-                    <Button Style="{StaticResource NexusPillButton}" Command="{Binding ResetAllVolumesCommand}" Margin="0,0,6,0" Padding="10,4" Content="إعادة ضبط" FontSize="11" />
+                    <Button Style="{StaticResource NexusPillButton}" Command="{Binding MuteAllChannelsCommand}" Margin="0,0,6,0" Padding="10,4" Content="Mute All" FontSize="11" />
+                    <Button Style="{StaticResource NexusPillButton}" Command="{Binding ResetAllVolumesCommand}" Margin="0,0,6,0" Padding="10,4" Content="Reset" FontSize="11" />
                     <Button Style="{StaticResource NexusAccentButton}" Command="{Binding RefreshSessionsCommand}" Height="28" Padding="12,3">
                         <StackPanel Orientation="Horizontal">
                             <Path Data="{StaticResource IconRefresh}" Stroke="#FFFFFF" StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform" Margin="0,0,5,0" VerticalAlignment="Center" />
-                            <TextBlock Text="تحديث الجلسات" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11" />
+                            <TextBlock Text="Sync" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11" />
                         </StackPanel>
                     </Button>
                 </StackPanel>
