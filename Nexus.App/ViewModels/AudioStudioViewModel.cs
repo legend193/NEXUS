@@ -15,11 +15,18 @@ public class EqualizerBandItem : ViewModelBase
     private float _gainDb;
     public string FrequencyLabel { get; init; } = string.Empty;
     public int BandIndex { get; init; }
+    public Action? OnGainChanged { get; set; }
 
     public float GainDb
     {
         get => _gainDb;
-        set => SetProperty(ref _gainDb, (float)Math.Round(value, 1));
+        set
+        {
+            if (SetProperty(ref _gainDb, (float)Math.Round(value, 1)))
+            {
+                OnGainChanged?.Invoke();
+            }
+        }
     }
 }
 
@@ -363,7 +370,77 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 {
     private readonly IAudioEngine _audioEngine;
     private string _selectedTopTab = "Mixer";
-    private double _chatMixValue = 50.0;
+    private double _chatMixValue = 0.0; // -1.0 (100% Game, 0% Chat) to 0.0 (Balanced) to +1.0 (0% Game, 100% Chat)
+    private float _eqPreAmpGainDb = -2.5f;
+    private string _eqCurvePathData = string.Empty;
+    private string _eqCurveFillData = string.Empty;
+
+    public double ChatMixSliderValue
+    {
+        get => _chatMixValue * 100.0;
+        set
+        {
+            ChatMixValue = Math.Clamp(value / 100.0, -1.0, 1.0);
+        }
+    }
+
+    public double ChatMixValue
+    {
+        get => _chatMixValue;
+        set
+        {
+            if (SetProperty(ref _chatMixValue, Math.Round(value, 2)))
+            {
+                OnPropertyChanged(nameof(ChatMixSliderValue));
+                OnPropertyChanged(nameof(ChatMixBalanceText));
+                ApplyChatMix();
+                SaveState();
+            }
+        }
+    }
+
+    public string ChatMixBalanceText
+    {
+        get
+        {
+            if (Math.Abs(_chatMixValue) < 0.02) return "Game 100% • Chat 100% (Balanced)";
+            if (_chatMixValue < 0)
+            {
+                int chatPct = (int)Math.Round((1.0 + _chatMixValue) * 100.0);
+                return $"Game 100% • Chat {chatPct}%";
+            }
+            else
+            {
+                int gamePct = (int)Math.Round((1.0 - _chatMixValue) * 100.0);
+                return $"Game {gamePct}% • Chat 100%";
+            }
+        }
+    }
+
+    public float EqPreAmpGainDb
+    {
+        get => _eqPreAmpGainDb;
+        set
+        {
+            if (SetProperty(ref _eqPreAmpGainDb, (float)Math.Round(value, 1)))
+            {
+                UpdateEqCurve();
+                SaveState();
+            }
+        }
+    }
+
+    public string EqCurvePathData
+    {
+        get => _eqCurvePathData;
+        private set => SetProperty(ref _eqCurvePathData, value);
+    }
+
+    public string EqCurveFillData
+    {
+        get => _eqCurveFillData;
+        private set => SetProperty(ref _eqCurveFillData, value);
+    }
     private EqualizerPreset _selectedPreset;
     private readonly DispatcherTimer _refreshTimer;
     private readonly DispatcherTimer _meterTimer;
@@ -417,18 +494,6 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public double ChatMixValue
-    {
-        get => _chatMixValue;
-        set
-        {
-            if (SetProperty(ref _chatMixValue, Math.Round(value, 0)))
-            {
-                ApplyChatMix();
-                SaveState();
-            }
-        }
-    }
 
     public bool IsSpatialAudioEnabled
     {
@@ -751,20 +816,26 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         string[] freqLabels = { "31Hz", "63Hz", "125Hz", "250Hz", "500Hz", "1kHz", "2kHz", "4kHz", "8kHz", "16kHz" };
         for (int i = 0; i < freqLabels.Length; i++)
         {
-            EqualizerBands.Add(new EqualizerBandItem
+            var band = new EqualizerBandItem
             {
                 BandIndex = i,
                 FrequencyLabel = freqLabels[i],
                 GainDb = 0f
-            });
+            };
+            band.OnGainChanged = () =>
+            {
+                UpdateEqCurve();
+                SaveState();
+            };
+            EqualizerBands.Add(band);
         }
 
         // Sonar Game-optimized presets
-        EqualizerPresets.Add(new EqualizerPreset { Name = "CS2 / Warzone Footsteps", BandGainsDb = new float[] { -2f, 1f, 3f, 4.5f, 6f, 7f, 5f, 3f, 1f, 0f } });
-        EqualizerPresets.Add(new EqualizerPreset { Name = "Apex Legends Enhanced", BandGainsDb = new float[] { 1f, 2f, 4f, 5f, 6.5f, 6f, 4f, 2f, 1f, 0f } });
-        EqualizerPresets.Add(new EqualizerPreset { Name = "Bass Immersion", BandGainsDb = new float[] { 8f, 7f, 5f, 3f, 1f, 0f, 0f, 0f, 0f, 0f } });
-        EqualizerPresets.Add(new EqualizerPreset { Name = "Esports Vocal Clarity", BandGainsDb = new float[] { -3f, -1f, 1f, 3f, 5f, 6f, 4f, 2f, 0.5f, 0f } });
-        EqualizerPresets.Add(new EqualizerPreset { Name = "Flat Studio Reference", BandGainsDb = new float[10] });
+        EqualizerPresets.Add(EqualizerPreset.Gaming);
+        EqualizerPresets.Add(EqualizerPreset.BassBoost);
+        EqualizerPresets.Add(EqualizerPreset.Vocals);
+        EqualizerPresets.Add(EqualizerPreset.Cinema);
+        EqualizerPresets.Add(EqualizerPreset.Flat);
 
         _selectedPreset = EqualizerPresets[0];
         ApplyPresetToBands(_selectedPreset);
@@ -779,7 +850,7 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             auxCh.Volume = 50;
             micCh.Volume = 85;
             foreach (var ch in Channels) ch.IsMuted = false;
-            ChatMixValue = 50.0;
+            ChatMixValue = 0.0;
             SaveState();
         });
 
@@ -791,7 +862,7 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         RefreshSessionsCommand = new RelayCommand(async () => await RefreshAsync());
         RefreshAudioCommand = RefreshSessionsCommand;
 
-        ResetChatMixCommand = new RelayCommand(() => ChatMixValue = 50.0);
+        ResetChatMixCommand = new RelayCommand(() => ChatMixValue = 0.0);
         SetChatMixBalanceCommand = new RelayCommand(param =>
         {
             if (param is double d) ChatMixValue = d;
@@ -815,6 +886,7 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
         // Load saved state before starting loops
         LoadSavedState();
+        UpdateEqCurve();
 
         // 35ms Peak Meter animation loop (decay and responsiveness)
         _meterTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(35) };
@@ -829,31 +901,112 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
         _ = RefreshAsync();
     }
 
+    private static readonly double[] EqFrequencies = GenerateLogFrequencies(120, 20.0, 20000.0);
+
+    private static double[] GenerateLogFrequencies(int count, double minFreq, double maxFreq)
+    {
+        var freqs = new double[count];
+        double logMin = Math.Log10(minFreq);
+        double logMax = Math.Log10(maxFreq);
+        for (int i = 0; i < count; i++)
+        {
+            double logF = logMin + (logMax - logMin) * i / (count - 1);
+            freqs[i] = Math.Pow(10, logF);
+        }
+        return freqs;
+    }
+
+    public void UpdateEqCurve()
+    {
+        for (int i = 0; i < EqualizerBands.Count; i++)
+        {
+            var b = EqualizerBands[i];
+            var type = i switch
+            {
+                0 => ParametricFilterType.LowShelf,
+                9 => ParametricFilterType.HighShelf,
+                _ => ParametricFilterType.PeakingEQ
+            };
+            float freq = i < EqualizerPreset.DefaultFrequencies.Length ? EqualizerPreset.DefaultFrequencies[i] : 1000f;
+            _audioEngine.EqEngine.UpdateBand(i, b.GainDb, freq, 1.414f, type, true);
+        }
+
+        _audioEngine.EqEngine.PreAmpGainDb = _eqPreAmpGainDb;
+
+        var response = _audioEngine.EqEngine.CalculateFrequencyResponse(EqFrequencies);
+
+        double width = 640.0;
+        double height = 160.0;
+        double midY = height / 2.0;
+        double dbRange = 15.0;
+
+        var sbPath = new System.Text.StringBuilder();
+        var sbFill = new System.Text.StringBuilder();
+
+        for (int i = 0; i < EqFrequencies.Length; i++)
+        {
+            double x = (double)i / (EqFrequencies.Length - 1) * width;
+            double gain = Math.Clamp(response[i], -dbRange, dbRange);
+            double y = midY - (gain / dbRange) * (midY - 10.0);
+
+            if (i == 0)
+            {
+                sbPath.Append(System.Globalization.CultureInfo.InvariantCulture, $"M {x:F1},{y:F1}");
+                sbFill.Append(System.Globalization.CultureInfo.InvariantCulture, $"M {x:F1},{y:F1}");
+            }
+            else
+            {
+                sbPath.Append(System.Globalization.CultureInfo.InvariantCulture, $" L {x:F1},{y:F1}");
+                sbFill.Append(System.Globalization.CultureInfo.InvariantCulture, $" L {x:F1},{y:F1}");
+            }
+        }
+
+        sbFill.Append(System.Globalization.CultureInfo.InvariantCulture, $" L {width:F1},{height:F1} L 0,{height:F1} Z");
+
+        EqCurvePathData = sbPath.ToString();
+        EqCurveFillData = sbFill.ToString();
+    }
+
     private void ApplyChatMix()
     {
-        // ChatMix: 50 = balanced. <50 attenuates chat, >50 attenuates game
-        float gameFactor = 1.0f;
-        float chatFactor = 1.0f;
+        _audioEngine.BusManager.ChatMixValue = _chatMixValue;
+        float gameFactor = _audioEngine.BusManager.GameChatMixMultiplier;
+        float chatFactor = _audioEngine.BusManager.ChatChatMixMultiplier;
 
-        if (_chatMixValue < 50.0)
+        if (Channels.Count >= 3)
         {
-            chatFactor = (float)(_chatMixValue / 50.0);
-        }
-        else if (_chatMixValue > 50.0)
-        {
-            gameFactor = (float)((100.0 - _chatMixValue) / 50.0);
+            Channels[1].Volume = 80f * gameFactor;
+            Channels[2].Volume = 85f * chatFactor;
         }
 
-        Channels[1].Volume = 80f * gameFactor;
-        Channels[2].Volume = 85f * chatFactor;
+        OnPropertyChanged(nameof(ChatMixBalanceText));
+        OnPropertyChanged(nameof(ChatMixSliderValue));
+        ReapplyAllSessionVolumes();
+    }
+
+    private void ReapplyAllSessionVolumes()
+    {
+        foreach (var ch in Channels)
+        {
+            foreach (var app in ch.AssignedApps)
+            {
+                float eff = _audioEngine.BusManager.CalculateEffectiveSessionVolume(app.ProcessId, app.Volume / 100f);
+                _audioEngine.SetSessionVolume(app.ProcessId, eff);
+            }
+        }
     }
 
     private void ApplyPresetToBands(EqualizerPreset preset)
     {
+        _eqPreAmpGainDb = preset.PreAmpGainDb;
+        OnPropertyChanged(nameof(EqPreAmpGainDb));
+
         for (int i = 0; i < Math.Min(EqualizerBands.Count, preset.BandGainsDb.Length); i++)
         {
             EqualizerBands[i].GainDb = preset.BandGainsDb[i];
         }
+
+        UpdateEqCurve();
     }
 
     private void ApplySoloRouting()
@@ -1181,6 +1334,25 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
         session.AssignedChannel = cleanTarget;
         _processRoutingMap[session.ProcessName] = cleanTarget;
+
+        SonarBusType busType = cleanTarget switch
+        {
+            var t when t.StartsWith("Game", StringComparison.OrdinalIgnoreCase) => SonarBusType.Game,
+            var t when t.StartsWith("Chat", StringComparison.OrdinalIgnoreCase) => SonarBusType.Chat,
+            var t when t.StartsWith("Media", StringComparison.OrdinalIgnoreCase) => SonarBusType.Media,
+            var t when t.StartsWith("Aux", StringComparison.OrdinalIgnoreCase) => SonarBusType.Aux,
+            _ => SonarBusType.Game
+        };
+
+        _audioEngine.BusManager.AssignProcessToBus(session.ProcessId, busType);
+        _audioEngine.BusManager.AssignProcessNameToBus(session.ProcessName, busType);
+
+        var targetStrip = Channels.FirstOrDefault(c => c.ChannelType.ToString().Equals(busType.ToString(), StringComparison.OrdinalIgnoreCase));
+        if (targetStrip?.SelectedDevice != null && !string.IsNullOrEmpty(targetStrip.SelectedDevice.Id))
+        {
+            _ = _audioEngine.RoutingService.SetAppOutputDeviceAsync(session.ProcessId, targetStrip.SelectedDevice.Id);
+        }
+
         _ = RefreshAsync();
         SaveState();
     }
@@ -1205,7 +1377,13 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
 
             _isLoadingState = true;
             _selectedTopTab = state.SelectedTopTab ?? "Mixer";
-            _chatMixValue = state.ChatMixValue;
+
+            if (state.ChatMixValue > 1.0)
+                _chatMixValue = (state.ChatMixValue - 50.0) / 50.0;
+            else
+                _chatMixValue = state.ChatMixValue;
+
+            _eqPreAmpGainDb = state.EqPreAmpGainDb;
 
             if (Channels.Count >= 6)
             {
@@ -1238,7 +1416,19 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             if (state.ProcessRoutingMap != null)
             {
                 _processRoutingMap.Clear();
-                foreach (var kvp in state.ProcessRoutingMap) _processRoutingMap[kvp.Key] = kvp.Value;
+                foreach (var kvp in state.ProcessRoutingMap)
+                {
+                    _processRoutingMap[kvp.Key] = kvp.Value;
+                    SonarBusType bType = kvp.Value switch
+                    {
+                        var t when t.StartsWith("Game", StringComparison.OrdinalIgnoreCase) => SonarBusType.Game,
+                        var t when t.StartsWith("Chat", StringComparison.OrdinalIgnoreCase) => SonarBusType.Chat,
+                        var t when t.StartsWith("Media", StringComparison.OrdinalIgnoreCase) => SonarBusType.Media,
+                        var t when t.StartsWith("Aux", StringComparison.OrdinalIgnoreCase) => SonarBusType.Aux,
+                        _ => SonarBusType.Game
+                    };
+                    _audioEngine.BusManager.AssignProcessNameToBus(kvp.Key, bType);
+                }
             }
 
             _isSpatialAudioEnabled = state.IsSpatialAudioEnabled;
@@ -1283,6 +1473,7 @@ public class AudioStudioViewModel : ViewModelBase, IDisposable
             {
                 SelectedTopTab = _selectedTopTab,
                 ChatMixValue = _chatMixValue,
+                EqPreAmpGainDb = _eqPreAmpGainDb,
 
                 MasterVolume = Channels.Count > 0 ? Channels[0].Volume : 85f,
                 MasterMuted = Channels.Count > 0 && Channels[0].IsMuted,

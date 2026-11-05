@@ -123,11 +123,11 @@
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="0" Content="100% اللعبة" Margin="0,0,5,0" Height="24" Padding="8,0" FontSize="10" />
-                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="25" Content="تركيز اللعبة (75/25)" Margin="0,0,5,0" Height="24" Padding="8,0" FontSize="10" />
+                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="-1.0" Content="100% اللعبة" Margin="0,0,5,0" Height="24" Padding="8,0" FontSize="10" />
+                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="-0.5" Content="تركيز اللعبة (75/25)" Margin="0,0,5,0" Height="24" Padding="8,0" FontSize="10" />
                             <Button Style="{StaticResource NexusPillButton}" Command="{Binding ResetChatMixCommand}" Content="متوازن (50/50)" Margin="0,0,5,0" Height="24" Padding="8,0" FontSize="10" />
-                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="75" Content="تركيز المحادثة (25/75)" Margin="0,0,5,0" Height="24" Padding="8,0" FontSize="10" />
-                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="100" Content="100% المحادثة" Height="24" Padding="8,0" FontSize="10" />
+                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="0.5" Content="تركيز المحادثة (25/75)" Margin="0,0,5,0" Height="24" Padding="8,0" FontSize="10" />
+                            <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="1.0" Content="100% المحادثة" Height="24" Padding="8,0" FontSize="10" />
                         </StackPanel>
                     </Grid>
 
@@ -154,11 +154,11 @@
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             
-                            <Slider Grid.Row="0" Style="{StaticResource SonarChatMixSlider}" Value="{Binding ChatMixValue, Mode=TwoWay}" Minimum="0" Maximum="100" VerticalAlignment="Center" />
+                            <Slider Grid.Row="0" Style="{StaticResource SonarChatMixSlider}" Value="{Binding ChatMixSliderValue, Mode=TwoWay}" Minimum="-100" Maximum="100" VerticalAlignment="Center" />
                             
                             <Grid Grid.Row="1" Margin="2,3,2,0">
                                 <TextBlock Text="100% Game" FontSize="9" Foreground="#64748B" HorizontalAlignment="Left" />
-                                <TextBlock Text="50/50 Balanced" FontSize="9" FontWeight="SemiBold" Foreground="#94A3B8" HorizontalAlignment="Center" />
+                                <TextBlock Text="{Binding ChatMixBalanceText}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" />
                                 <TextBlock Text="100% Chat" FontSize="9" Foreground="#64748B" HorizontalAlignment="Right" />
                             </Grid>
                         </Grid>

@@ -164,11 +164,11 @@
                             </StackPanel>
 
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="0" Content="100% اللعبة" Margin="0,0,6,0" Height="26" Padding="10,0" />
-                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="25" Content="تركيز اللعبة (75/25)" Margin="0,0,6,0" Height="26" Padding="10,0" />
+                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="-1.0" Content="100% اللعبة" Margin="0,0,6,0" Height="26" Padding="10,0" />
+                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="-0.5" Content="تركيز اللعبة (75/25)" Margin="0,0,6,0" Height="26" Padding="10,0" />
                                 <Button Style="{StaticResource NexusPillButton}" Command="{Binding ResetChatMixCommand}" Content="متوازن (50/50)" Margin="0,0,6,0" Height="26" Padding="10,0" />
-                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="75" Content="تركيز المحادثة (25/75)" Margin="0,0,6,0" Height="26" Padding="10,0" />
-                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="100" Content="100% المحادثة" Height="26" Padding="10,0" />
+                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="0.5" Content="تركيز المحادثة (25/75)" Margin="0,0,6,0" Height="26" Padding="10,0" />
+                                <Button Style="{StaticResource NexusPillButton}" Command="{Binding SetChatMixBalanceCommand}" CommandParameter="1.0" Content="100% المحادثة" Height="26" Padding="10,0" />
                             </StackPanel>
                         </Grid>
 
@@ -193,11 +193,11 @@
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 
-                                <Slider Grid.Row="0" Style="{StaticResource SonarChatMixSlider}" Value="{Binding ChatMixValue, Mode=TwoWay}" Minimum="0" Maximum="100" VerticalAlignment="Center" />
+                                <Slider Grid.Row="0" Style="{StaticResource SonarChatMixSlider}" Value="{Binding ChatMixSliderValue, Mode=TwoWay}" Minimum="-100" Maximum="100" VerticalAlignment="Center" />
                                 
                                 <Grid Grid.Row="1" Margin="2,4,2,0">
                                     <TextBlock Text="100% Game" FontSize="9" Foreground="#64748B" HorizontalAlignment="Left" />
-                                    <TextBlock Text="50/50 Balanced" FontSize="9" FontWeight="SemiBold" Foreground="#94A3B8" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding ChatMixBalanceText}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" />
                                     <TextBlock Text="100% Chat" FontSize="9" Foreground="#64748B" HorizontalAlignment="Right" />
                                 </Grid>
                             </Grid>
@@ -849,10 +849,18 @@
                                 </StackPanel>
                             </Border>
 
-                            <Border Background="#111520" CornerRadius="8" Padding="14,6" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                            <Border Background="#111520" CornerRadius="8" Padding="14,6" Margin="0,0,12,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Smart Volume (معزز الحوار)" Style="{StaticResource TextSubtle}" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" />
                                     <CheckBox IsChecked="{Binding IsSmartVolumeEnabled, Mode=TwoWay}" Style="{StaticResource NexusToggleSwitch}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="#111520" CornerRadius="8" Padding="14,6" Margin="0,0,12,0" BorderBrush="{StaticResource BorderSubtleBrush}" BorderThickness="1">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Pre-Amp Gain" Style="{StaticResource TextSubtle}" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" />
+                                    <Slider Style="{StaticResource NexusSlider}" Width="80" Minimum="-12" Maximum="6" Value="{Binding EqPreAmpGainDb, Mode=TwoWay}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding EqPreAmpGainDb, StringFormat={}{0:+0.0;-0.0;0.0} dB}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" Margin="8,0,0,0" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Border>
                         </WrapPanel>
@@ -871,13 +879,49 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 10-Band Graphic Equalizer Faders -->
+                <!-- 10-Band Graphic Equalizer Faders & Live Curve -->
                 <Border Style="{StaticResource GlassCard}" Padding="20">
                     <StackPanel>
                         <Grid Margin="0,0,0,16">
-                            <TextBlock Text="المعادل الصوتي البارامتري (10-Band Precision Equalizer)" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" />
-                            <TextBlock Text="-12 dB إلى +12 dB" Style="{StaticResource TextSubtle}" HorizontalAlignment="Right" FontSize="11" />
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse Width="8" Height="8" Fill="{StaticResource AccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                <TextBlock Text="المعادل الصوتي البارامتري (10-Band Precision Equalizer)" FontWeight="Bold" FontSize="14" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Text="-15 dB إلى +15 dB • منحنى الاستجابة الحية" Style="{StaticResource TextSubtle}" HorizontalAlignment="Right" FontSize="11" VerticalAlignment="Center" />
                         </Grid>
+
+                        <!-- Real-Time Frequency Response Curve Visualizer -->
+                        <Border Background="#090C13" CornerRadius="10" Padding="12,8" Margin="0,0,0,18" BorderBrush="#1C2433" BorderThickness="1" Height="150">
+                            <Grid ClipToBounds="True">
+                                <!-- Grid Reference Lines -->
+                                <Line X1="0" Y1="22" X2="900" Y2="22" Stroke="#131A26" StrokeThickness="1" StrokeDashArray="4 2" />
+                                <Line X1="0" Y1="48" X2="900" Y2="48" Stroke="#131A26" StrokeThickness="1" StrokeDashArray="4 2" />
+                                <Line X1="0" Y1="75" X2="900" Y2="75" Stroke="#233247" StrokeThickness="1.5" />
+                                <Line X1="0" Y1="102" X2="900" Y2="102" Stroke="#131A26" StrokeThickness="1" StrokeDashArray="4 2" />
+                                <Line X1="0" Y1="128" X2="900" Y2="128" Stroke="#131A26" StrokeThickness="1" StrokeDashArray="4 2" />
+
+                                <TextBlock Text="+12 dB" FontSize="8" Foreground="#475569" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,16,0,0" />
+                                <TextBlock Text="0 dB" FontSize="9" FontWeight="Bold" Foreground="#64748B" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,68,0,0" />
+                                <TextBlock Text="-12 dB" FontSize="8" Foreground="#475569" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,122,0,0" />
+
+                                <!-- Glow Fill Under Curve -->
+                                <Path Data="{Binding EqCurveFillData}" Stretch="Fill" Opacity="0.16">
+                                    <Path.Fill>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Color="#00D2FF" Offset="0.0" />
+                                            <GradientStop Color="#000000" Offset="1.0" />
+                                        </LinearGradientBrush>
+                                    </Path.Fill>
+                                </Path>
+
+                                <!-- Live Interactive Vector Curve -->
+                                <Path Data="{Binding EqCurvePathData}" Stretch="Fill" Stroke="{StaticResource AccentBrush}" StrokeThickness="2.5" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                                    <Path.Effect>
+                                        <DropShadowEffect BlurRadius="8" Color="#00D2FF" Opacity="0.8" ShadowDepth="0" />
+                                    </Path.Effect>
+                                </Path>
+                            </Grid>
+                        </Border>
 
                         <ItemsControl ItemsSource="{Binding EqualizerBands}">
                             <ItemsControl.ItemsPanel>

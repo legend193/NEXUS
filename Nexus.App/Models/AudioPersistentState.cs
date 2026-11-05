@@ -3,7 +3,7 @@ namespace Nexus.App.Models;
 public class AudioPersistentState
 {
     public string SelectedTopTab { get; set; } = "Mixer";
-    public double ChatMixValue { get; set; } = 50.0;
+    public double ChatMixValue { get; set; } = 0.0; // -1.0 to +1.0
 
     // Channel Levels & Mute States
     public float MasterVolume { get; set; } = 85f;
@@ -34,6 +34,7 @@ public class AudioPersistentState
 
     // Studio & EQ Features
     public string SelectedPresetName { get; set; } = "CS2 / Warzone Footsteps";
+    public float EqPreAmpGainDb { get; set; } = -2.5f;
     public float[] EqualizerBandGains { get; set; } = new float[10];
     public bool IsSpatialAudioEnabled { get; set; } = true;
     public bool IsClearCastAiEnabled { get; set; } = true;
@@ -44,8 +45,15 @@ public class AudioPersistentState
 
     // Microphone DSP
     public float MicGainDb { get; set; } = 0.0f;
+    public bool NoiseGateEnabled { get; set; } = true;
     public float NoiseGateThresholdDb { get; set; } = -45.0f;
+    public float NoiseGateAttackMs { get; set; } = 5.0f;
+    public float NoiseGateReleaseMs { get; set; } = 50.0f;
+
+    public bool CompressorEnabled { get; set; } = true;
     public float CompressorThresholdDb { get; set; } = -18.0f;
+    public float CompressorRatio { get; set; } = 3.0f;
+    public float CompressorMakeUpGainDb { get; set; } = 2.0f;
     public float LimiterCeilingDb { get; set; } = -1.0f;
 
     // Process Routing Map (ProcessName -> ChannelName)

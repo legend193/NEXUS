@@ -147,13 +147,28 @@ public class AudioEngine : IAudioEngine, IDisposable
     private readonly List<IAudioSession> _activeSessions = new();
     private readonly object _lock = new();
 
+    public ISonarBusManager BusManager { get; } = new SonarBusManager();
+    public IAudioRoutingService RoutingService { get; } = new AudioRoutingService();
+    public IParametricEqEngine EqEngine { get; } = new ParametricEqEngine();
+    public AudioSessionManagerService SessionManager { get; }
+
     public IReadOnlyList<IAudioEndpoint> PlaybackDevices { get { lock (_lock) return _playbackDevices.ToList(); } }
     public IReadOnlyList<IAudioEndpoint> RecordingDevices { get { lock (_lock) return _recordingDevices.ToList(); } }
     public IAudioEndpoint? DefaultPlaybackDevice { get; private set; }
     public IAudioEndpoint? DefaultRecordingDevice { get; private set; }
     public IReadOnlyList<IAudioSession> ActiveSessions { get { lock (_lock) return _activeSessions.ToList(); } }
 
-    public EqualizerPreset ActiveEqualizerPreset { get; set; } = EqualizerPreset.Gaming;
+    public EqualizerPreset ActiveEqualizerPreset
+    {
+        get => _activePreset;
+        set
+        {
+            _activePreset = value;
+            EqEngine.LoadPreset(value);
+        }
+    }
+    private EqualizerPreset _activePreset = EqualizerPreset.Gaming;
+
     public MicrophoneDspConfig MicDspConfig { get; set; } = new();
 
     public event EventHandler? DevicesChanged;
@@ -164,6 +179,23 @@ public class AudioEngine : IAudioEngine, IDisposable
     {
         _logger = logger;
         _enumerator = new MMDeviceEnumerator();
+        SessionManager = new AudioSessionManagerService();
+
+        SessionManager.SessionsChanged += (s, e) =>
+        {
+            SyncActiveSessions();
+            SessionsChanged?.Invoke(this, EventArgs.Empty);
+        };
+
+        SessionManager.DevicesChanged += (s, e) =>
+        {
+            _ = RefreshDevicesAsync();
+        };
+
+        SessionManager.PeakMetersUpdated += (s, e) =>
+        {
+            PeakLevelsUpdated?.Invoke(this, EventArgs.Empty);
+        };
     }
 
     public Task RefreshDevicesAsync()
@@ -267,53 +299,27 @@ public class AudioEngine : IAudioEngine, IDisposable
         "dwm"
     };
 
-    public Task RefreshSessionsAsync()
+    private void SyncActiveSessions()
     {
         lock (_lock)
         {
             _activeSessions.Clear();
-            var seenPids = new HashSet<int>();
-
-            try
+            foreach (var s in SessionManager.ActiveSessions)
             {
-                var renderCollection = _enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active);
-                foreach (var device in renderCollection)
+                if (!string.IsNullOrWhiteSpace(s.ProcessName) && !IgnoredProcessNames.Contains(s.ProcessName))
                 {
-                    try
-                    {
-                        var sessionManager = device.AudioSessionManager;
-                        if (sessionManager == null) continue;
-                        var sessions = sessionManager.Sessions;
-                        for (int i = 0; i < sessions.Count; i++)
-                        {
-                            var s = sessions[i];
-                            if (s.State != AudioSessionState.AudioSessionStateExpired)
-                            {
-                                int pid = (int)s.GetProcessID;
-                                if (pid > 4 && seenPids.Add(pid))
-                                {
-                                    var wrapper = new AudioSessionWrapper(s);
-                                    if (!string.IsNullOrWhiteSpace(wrapper.ProcessName) &&
-                                        !IgnoredProcessNames.Contains(wrapper.ProcessName))
-                                    {
-                                        _activeSessions.Add(wrapper);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch { }
+                    _activeSessions.Add(s);
                 }
             }
-            catch (Exception ex)
-            {
-                _logger?.LogDebug(ex, "Could not enumerate active audio sessions across render endpoints.");
-            }
         }
+    }
 
+    public async Task RefreshSessionsAsync()
+    {
+        await SessionManager.RefreshSessionsAsync();
+        SyncActiveSessions();
         SessionsChanged?.Invoke(this, EventArgs.Empty);
         PeakLevelsUpdated?.Invoke(this, EventArgs.Empty);
-        return Task.CompletedTask;
     }
 
     public void SetPlaybackDeviceVolume(string deviceId, float volume)
@@ -384,6 +390,7 @@ public class AudioEngine : IAudioEngine, IDisposable
 
     public void Dispose()
     {
+        SessionManager.Dispose();
         _enumerator.Dispose();
     }
 }
